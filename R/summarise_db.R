@@ -12,11 +12,11 @@ summarise_db <- function(x){
     x_locus <- x[[locus]]
     
     # split by comma
-    x_locus_unpacked <- disclapmixExtended:::unpack_haplotypes(x_locus)
+    x_locus_unpacked <- unpack_haplotypes(x_locus)
     x_unpacked[[locus]] <- x_locus_unpacked
     
     # grab only integer alleles
-    x_locus_int <- disclapmixExtended:::filter_integer_alleles(x_locus_unpacked)
+    x_locus_int <- filter_integer_alleles(x_locus_unpacked)
     
     ind_one_int <- sapply(x_locus_int,length)==1 & sapply(x_locus_unpacked,length)==1
     ind_two_int <- sapply(x_locus_int,length)==2 & sapply(x_locus_unpacked,length)==2
