@@ -1,4 +1,4 @@
 
-verbose_print <- function(message){
-  cat(format(Sys.time(), "%X:"), message, "\n")
+verbose_print <- function(...){
+  cat(format(Sys.time(), "%X:"), ..., "\n")
 }
