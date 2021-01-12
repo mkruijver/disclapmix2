@@ -47,7 +47,7 @@ sort_alleles <- function(alleles){
 unpack_profiles <- function(profiles){
   if (!inherits(profiles, "data.frame")) stop("expected a data.frame")
   
-  r <- setNames(lapply(profiles, disclapmixExtended:::unpack_haplotypes), nm = names(profiles))
+  r <- stats::setNames(lapply(profiles, unpack_haplotypes), nm = names(profiles))
   class(r) <- "data.frame"
   rownames(r) <- rownames(profiles)
   r
@@ -60,7 +60,7 @@ pack_profiles <- function(profiles){
     sapply(profiles_locus, pack_haplotypes)
   })
   
-  data.frame(setNames(packed, nm = names(profiles)), stringsAsFactors = FALSE, check.names = FALSE)
+  data.frame(stats::setNames(packed, nm = names(profiles)), stringsAsFactors = FALSE, check.names = FALSE)
 }
 
 validate_packed_profiles <- function(profiles){
