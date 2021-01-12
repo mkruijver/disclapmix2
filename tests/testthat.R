@@ -1,4 +1,4 @@
 library(testthat)
-library(disclapmixExtended)
+library(disclapmix2)
 
-test_check("disclapmixExtended")
+test_check("disclapmix2")
