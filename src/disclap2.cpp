@@ -1,0 +1,296 @@
+#include <Rcpp.h>
+using namespace Rcpp;
+
+const int number_of_precomputed_powers = 16;
+
+// [[Rcpp::export]]
+NumericMatrix get_P(NumericVector theta, int number_of_loci, int number_of_clusters) {
+  // obtains the the discrete Laplace parameters (p) by cluster (row) and locus (column)
+  // from the parametrisation
+  
+  int r = number_of_loci;
+  int c = number_of_clusters;
+  
+  if (theta.size()!=(c-1 + r+c-1)) Rcpp::stop("theta needs length number_of_clusters-1 + number_of_loci+number_of_clusters-1");
+  
+  // theta is the full parameter vector:
+  // (theta_tau, theta_pjk)
+  
+  // we use theta_pjk to parametrise the locus and cluster effects:
+  // theta_pjk = (omega_1, ..., omega_c, lambda_1, ..., lambda_{r-1})
+  
+  // log p_{jk} = omega_j + lambda_k
+  //              (age)     (mutation rate)
+  auto p = NumericMatrix(c, r);
+  
+  if (number_of_clusters==1){
+    for(int i_locus=0; i_locus < number_of_loci; i_locus++){
+      p[i_locus] = std::exp(theta[i_locus]);
+      
+      if (p[i_locus] > 0.99) p[i_locus] = 0.99;
+    }
+    
+    return p;
+  }
+  
+  for(auto i_cluster = 0; i_cluster < c; i_cluster++){   // cluster
+    for(auto i_locus = 0; i_locus < r; i_locus++){ // locus
+      
+      if (i_locus==0){
+        p(i_cluster, i_locus) = std::exp(theta[c - 1 + i_cluster]);
+      }else{
+        p(i_cluster, i_locus) = std::exp(theta[c - 1 + i_cluster] + theta[c - 1 + c + i_locus - 1]);
+      }
+      
+      if (p(i_cluster, i_locus)>0.99) p(i_cluster, i_locus) = 0.99;
+    }
+    
+  }
+  
+  return p;
+}
+
+// [[Rcpp::export]]
+NumericVector get_tau(NumericVector theta, int number_of_loci, int number_of_clusters){
+  int r = number_of_loci;
+  int c = number_of_clusters;
+  
+  if (theta.size()!=(c-1 + r+c-1)) Rcpp::stop("theta needs length number_of_clusters-1 + number_of_loci+number_of_clusters-1");
+
+  NumericVector tau(number_of_clusters);
+  
+  // extract tau from parameter vector
+  double tau_cum = 0.0;
+  
+  for(int i_cluster = 0; i_cluster < number_of_clusters - 1; i_cluster++){
+    
+    double tau_i = exp(theta[i_cluster]);
+    
+    tau[i_cluster] = tau_i;
+    
+    tau_cum += tau_i;
+  }
+  
+  tau[number_of_clusters - 1] = 1.0 - tau_cum;
+  
+  return tau;
+}
+
+std::vector<NumericMatrix> precompute_dlm_powers(NumericMatrix p_by_cluster_and_locus){
+  std::vector<NumericMatrix> prs_by_cluster;
+  
+  int number_of_clusters = p_by_cluster_and_locus.nrow();
+  int number_of_loci = p_by_cluster_and_locus.ncol();
+  
+  for(int i_cluster = 0; i_cluster < number_of_clusters; i_cluster++){
+    NumericMatrix prs(number_of_precomputed_powers, number_of_loci);
+    
+    for(int i_locus = 0; i_locus < number_of_loci; i_locus++){
+      
+      double p = p_by_cluster_and_locus(i_cluster, i_locus);
+      
+      prs(0, i_locus) = (1.0-p)/(1.0+p);
+      
+      for(int i = 1; i < number_of_precomputed_powers; i++){
+        prs(i, i_locus) = (1.0-p)/(1.0+p) * std::pow(p,i);//prs(i-1, i_locus) * p;
+        // prs(i, i_locus) = prs(i-1, i_locus) * p;
+      }
+    }
+    
+    prs_by_cluster.push_back(prs);
+  }
+  
+  return prs_by_cluster;
+}
+  
+double compute_profile_pr(int i, int i_cluster, std::vector<NumericMatrix> &prs_by_cluster, 
+                          IntegerMatrix &db, IntegerMatrix &y, int number_of_1_loci,
+                          int number_of_2_loci){
+  double pr_cluster = 1.0;
+  
+  // pr. for the 1-loci
+  for(int i_locus = 0; i_locus < number_of_1_loci; i_locus++){
+    
+    // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
+    int delta = std::abs(db(i,i_locus) - y(i_cluster, i_locus));
+    if (delta >= number_of_precomputed_powers) Rcpp::stop("range outside of pre-computations");
+    
+    pr_cluster *= prs_by_cluster[i_cluster](delta, i_locus);
+  }
+  
+  // pr. for the 2-loci
+  for(int i_2_locus = 0; i_2_locus < number_of_2_loci; i_2_locus++){
+    int i_locus = number_of_1_loci + i_2_locus;
+    
+    int col_a = number_of_1_loci + 2 * i_2_locus;
+    int col_b = number_of_1_loci + 2 * i_2_locus + 1;
+    
+    int x_a = db(i, col_a);
+    int x_b = db(i, col_b);
+    
+    int y_a = y(i_cluster, col_a);
+    int y_b = y(i_cluster, col_b);
+    
+    int delta_a_a = std::abs(x_a - y_a);
+    int delta_b_b = std::abs(x_b - y_b);
+    
+    int delta_b_a = std::abs(x_a - y_a);
+    int delta_a_b = std::abs(x_b - y_b);
+    
+    if (delta_a_a >= number_of_precomputed_powers || delta_b_b >= number_of_precomputed_powers 
+          || delta_b_a >= number_of_precomputed_powers || delta_a_b >= number_of_precomputed_powers){
+      Rcpp::stop("range outside of pre-computations");
+    } 
+    
+    // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
+    pr_cluster *= 0.5 * 
+      (prs_by_cluster[i_cluster](delta_a_a, i_locus) * prs_by_cluster[i_cluster](delta_b_b, i_locus) +
+      prs_by_cluster[i_cluster](delta_b_a, i_locus) * prs_by_cluster[i_cluster](delta_a_b, i_locus));
+  }
+  
+  return pr_cluster;
+} 
+  
+// [[Rcpp::export]]
+double loglik_tau_p(NumericVector tau, NumericMatrix p_by_cluster_and_locus, IntegerMatrix db, IntegerMatrix y,
+                int number_of_1_loci, int number_of_2_loci) {
+  
+  int n = db.nrow();
+
+  int number_of_loci = number_of_1_loci + number_of_2_loci;
+  int number_of_clusters = tau.length();
+  
+  if (p_by_cluster_and_locus.nrow() != number_of_clusters){
+    Rcpp::stop("p should have as many rows as length of tau");
+  }
+  if (p_by_cluster_and_locus.ncol() != number_of_loci){
+    Rcpp::stop("p should have as many columns as number of loci");
+  }
+  if (db.ncol() != number_of_1_loci + 2*number_of_2_loci){
+    Rcpp::stop("db should have as many columns as number_of_1_loci + 2*number_of_2_loci");
+  }
+  if (y.nrow() != number_of_clusters){
+    Rcpp::stop("y should have as many rows as length of tau");
+  }
+  if (y.ncol() != number_of_1_loci + 2*number_of_2_loci){
+    Rcpp::stop("y should have as many columns as number_of_1_loci + 2 * number_of_2_loci");
+  }
+  
+  // make sure tau is valid
+  for(int i = 0; i < tau.size(); i++){
+    if (tau[i] < 0 || tau[i] >1) return R_NegInf;
+  }
+  
+  // pre-compute part of the discrete Laplace pmf for each cluster and locus
+  std::vector<NumericMatrix> prs_by_cluster = precompute_dlm_powers(p_by_cluster_and_locus);
+
+  double loglik = 0.0;
+  
+  // for each profile
+  for(int i = 0; i < n; i++){
+    double pr = 0.0;
+    
+    // compute the pr. in each cluster
+    for(int i_cluster = 0; i_cluster < number_of_clusters; i_cluster++){
+      
+      double pr_cluster = compute_profile_pr(i, i_cluster, prs_by_cluster, 
+                                             db, y, number_of_1_loci, number_of_2_loci);
+      
+      pr += tau[i_cluster] * pr_cluster;
+    }
+    
+    loglik += std::log(pr);
+  }
+  
+  return loglik;
+}
+
+
+// [[Rcpp::export]]
+double neg_loglik_theta(NumericVector theta, IntegerMatrix db, IntegerMatrix y,
+                    int number_of_1_loci, int number_of_2_loci) {
+  
+  int number_of_loci = number_of_1_loci + number_of_2_loci;
+  int number_of_clusters = y.nrow();
+  
+  // obtain model parameters from theta
+  NumericVector tau = get_tau(theta, number_of_loci, number_of_clusters);
+  NumericMatrix p = get_P(theta, number_of_loci, number_of_clusters);
+  
+  double ll = loglik_tau_p(tau, p, db, y, number_of_1_loci, number_of_2_loci);
+  
+  return -ll;
+}
+
+
+// [[Rcpp::export]]
+NumericMatrix compute_profile_prs(NumericMatrix p_by_cluster_and_locus, IntegerMatrix db, IntegerMatrix y,
+                    int number_of_1_loci, int number_of_2_loci) {
+  
+  int n = db.nrow();
+  
+  int number_of_loci = number_of_1_loci + number_of_2_loci;
+  int number_of_clusters = p_by_cluster_and_locus.nrow();
+  
+  NumericMatrix pr(n, number_of_clusters);
+    
+  if (p_by_cluster_and_locus.ncol() != number_of_loci){
+    Rcpp::stop("p should have as many columns as number of loci");
+  }
+  if (db.ncol() != number_of_1_loci + 2*number_of_2_loci){
+    Rcpp::stop("db should have as many columns as number_of_1_loci + 2*number_of_2_loci");
+  }
+  if (y.nrow() != number_of_clusters){
+    Rcpp::stop("y should have as many rows as length of tau");
+  }
+  if (y.ncol() != number_of_1_loci + 2*number_of_2_loci){
+    Rcpp::stop("y should have as many columns as number_of_1_loci + 2 * number_of_2_loci");
+  }
+  
+  // pre-compute part of the discrete Laplace pmf for each cluster and locus
+  std::vector<NumericMatrix> prs_by_cluster = precompute_dlm_powers(p_by_cluster_and_locus);
+  
+  double loglik = 0.0;
+  
+  // for each profile
+  for(int i = 0; i < n; i++){
+    
+    // compute the pr. in each cluster
+    for(int i_cluster = 0; i_cluster < number_of_clusters; i_cluster++){
+      
+      double pr_cluster = compute_profile_pr(i, i_cluster, prs_by_cluster, 
+                                             db, y, number_of_1_loci, number_of_2_loci);
+      
+      
+      pr(i, i_cluster) = pr_cluster;
+    }
+  }
+  
+  return pr;
+}
+
+// [[Rcpp::export]]
+NumericMatrix compute_posterior_cluster_prs(NumericMatrix profile_pr, NumericVector tau){
+  int n = profile_pr.nrow();
+  int number_of_clusters = profile_pr.ncol();
+  
+  if (tau.length() != number_of_clusters) Rcpp::stop("tau should have length equal to number of columns in profile_pr");
+  
+  NumericMatrix posterior(n, number_of_clusters);
+  
+  for(int i = 0; i < n; i++){
+    
+    double total_pr = 0.0;
+    
+    for(int i_cluster = 0; i_cluster < number_of_clusters; i_cluster++){
+      total_pr += tau[i_cluster] * profile_pr(i, i_cluster);
+    }
+    
+    for(int i_cluster = 0; i_cluster < number_of_clusters; i_cluster++){
+      posterior(i, i_cluster) = (1.0/total_pr) * tau[i_cluster] * profile_pr(i, i_cluster);
+    }
+    
+  }
+  
+  return posterior;
+}
