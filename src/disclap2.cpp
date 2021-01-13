@@ -111,6 +111,8 @@ double compute_profile_pr(int i, int i_cluster, std::vector<NumericMatrix> &prs_
   // pr. for the 1-loci
   for(int i_locus = 0; i_locus < number_of_1_loci; i_locus++){
     
+    if (db(i, i_locus) == NA_INTEGER) continue;
+    
     // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
     int delta = std::abs(db(i,i_locus) - y(i_cluster, i_locus));
     if (delta >= number_of_precomputed_powers) Rcpp::stop("range outside of pre-computations");
@@ -127,6 +129,8 @@ double compute_profile_pr(int i, int i_cluster, std::vector<NumericMatrix> &prs_
     
     int x_a = db(i, col_a);
     int x_b = db(i, col_b);
+    
+    if (x_a==NA_INTEGER || x_b==NA_INTEGER) continue;
     
     int y_a = y(i_cluster, col_a);
     int y_b = y(i_cluster, col_b);
