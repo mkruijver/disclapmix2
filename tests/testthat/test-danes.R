@@ -3,9 +3,10 @@ test_that("danes", {
   require(disclapmix)
   
   data(danes) 
-  x <- as.matrix(danes)
-  x2 <- as.data.frame(sapply(danes, as.character))
-
+  
+  x <- as.matrix(danes[rep(seq_len(nrow(danes)), danes$n), -ncol(danes)])
+  x2 <- as.data.frame(sapply(danes[rep(seq_len(nrow(danes)), danes$n), -ncol(danes)], as.character))
+  
   for(K in 1:5){
     dlm_fit <- disclapmix(x, K)
     
