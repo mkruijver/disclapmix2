@@ -1,4 +1,4 @@
-# rm(list=ls())
+
 check_input_db <- function(x){
   if (!is.data.frame(x)) stop("x should be a data frame")
   if (!all(sapply(x,is.character))) stop("columns of x should be character vectors")
@@ -23,18 +23,6 @@ to_int_db <- function(x, one_loci, two_loci){
   
   x_int
 }
-
-# x_raw <- readxl::read_excel(system.file("extdata", "South_Australia.xlsx", package = "disclapmix2"), col_types = "text", sheet = 1)
-# x <- x_raw[-c(1,2)]
-# x <- x_raw[-c(1,2,21,26)]
-# x_raw <- readxl::read_excel(system.file("extdata", "Chinese_Han.xlsx", package = "disclapmix2"), col_types = "text")
-# # x_raw
-# x <- x_raw[rep(seq_len(nrow(x_raw)), times=as.integer(x_raw$Count)),-c(1:3)]
-
-# include_2_loci=TRUE
-# verbose=2
-# number_of_clusters = 2L
-# remove_non_standard_haplotypes = FALSE
 
 #' @export
 disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_non_standard_haplotypes = TRUE, verbose=0L){
