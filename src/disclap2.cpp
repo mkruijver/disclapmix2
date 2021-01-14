@@ -155,6 +155,86 @@ double compute_profile_pr(int i, int i_cluster, std::vector<NumericMatrix> &prs_
   return pr_cluster;
 } 
   
+double compute_profile_pr_ns(int i, int i_cluster, std::vector<NumericMatrix> &prs_by_cluster, 
+                            IntegerMatrix &db, IntegerMatrix &y, 
+                            NumericMatrix &pi, NumericMatrix &q,
+                            int number_of_1_loci,
+                            int number_of_2_loci){
+    double pr_cluster = 1.0;
+    
+    // pr. for the 1-loci
+    for(int i_locus = 0; i_locus < number_of_1_loci; i_locus++){
+      
+      int x = db(i,i_locus);
+      
+      if (x == NA_INTEGER) continue;
+      
+      if (x > 0){
+        // standard haplotype
+        int delta = std::abs(x - y(i_cluster, i_locus));
+        if (delta >= number_of_precomputed_powers) Rcpp::stop("range outside of pre-computations");
+        
+        pr_cluster *= (1.0 - pi(i_cluster, i_locus)) *
+          prs_by_cluster[i_cluster](delta, i_locus);
+      }
+      else{
+        // non-standard haplotype
+        int i_haplotype = -1 - x;
+        pr_cluster *= q(i_haplotype, i_cluster);
+        // Rcpp::Rcout << "Row " << i+1 << " haplotype " << x <<
+        //             " (idx is " << i_haplotype << ")" <<
+        //           " pr in cluster "  << i_cluster +1 << " is " <<
+        //             q(i_haplotype, i_cluster) << "\n";
+        
+      }
+    }
+    
+    // pr. for the 2-loci
+    for(int i_2_locus = 0; i_2_locus < number_of_2_loci; i_2_locus++){
+      int i_locus = number_of_1_loci + i_2_locus;
+      
+      int col_a = number_of_1_loci + 2 * i_2_locus;
+      int col_b = number_of_1_loci + 2 * i_2_locus + 1;
+      
+      int x_a = db(i, col_a);
+      int x_b = db(i, col_b);
+      
+      if (x_a==NA_INTEGER || x_b==NA_INTEGER) continue;
+      
+      if (x_a > 0){
+        // standard haplotype
+        
+        int y_a = y(i_cluster, col_a);
+        int y_b = y(i_cluster, col_b);
+        
+        int delta_a_a = std::abs(x_a - y_a);
+        int delta_b_b = std::abs(x_b - y_b);
+        
+        int delta_b_a = std::abs(x_a - y_a);
+        int delta_a_b = std::abs(x_b - y_b);
+        
+        if (delta_a_a >= number_of_precomputed_powers || delta_b_b >= number_of_precomputed_powers 
+              || delta_b_a >= number_of_precomputed_powers || delta_a_b >= number_of_precomputed_powers){
+          Rcpp::stop("range outside of pre-computations");
+        } 
+        
+        // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
+        pr_cluster *= 0.5 * 
+          (prs_by_cluster[i_cluster](delta_a_a, i_locus) * prs_by_cluster[i_cluster](delta_b_b, i_locus) +
+          prs_by_cluster[i_cluster](delta_b_a, i_locus) * prs_by_cluster[i_cluster](delta_a_b, i_locus));
+        
+      }
+      else{
+        // non-standard haplotype
+        int i_haplotype = -1 - x_a;
+        pr_cluster *= q(i_haplotype, i_cluster);
+      }
+      
+    }
+    
+    return pr_cluster;
+  } 
+  
 // [[Rcpp::export]]
 double loglik_tau_p(NumericVector tau, NumericMatrix p_by_cluster_and_locus, IntegerMatrix db, IntegerMatrix y,
                 int number_of_1_loci, int number_of_2_loci) {
@@ -209,6 +289,68 @@ double loglik_tau_p(NumericVector tau, NumericMatrix p_by_cluster_and_locus, Int
   return loglik;
 }
 
+// [[Rcpp::export]]
+double loglik_tau_p_ns(NumericVector tau, NumericMatrix p_by_cluster_and_locus, 
+                       IntegerMatrix db, IntegerMatrix y,
+                       NumericMatrix pi, NumericMatrix q,
+                       int number_of_1_loci, int number_of_2_loci) {
+  
+  int n = db.nrow();
+  
+  int number_of_loci = number_of_1_loci + number_of_2_loci;
+  int number_of_clusters = tau.length();
+  
+  if (p_by_cluster_and_locus.nrow() != number_of_clusters){
+    Rcpp::stop("p should have as many rows as length of tau");
+  }
+  if (p_by_cluster_and_locus.ncol() != number_of_loci){
+    Rcpp::stop("p should have as many columns as number of loci");
+  }
+  if (db.ncol() != number_of_1_loci + 2*number_of_2_loci){
+    Rcpp::stop("db should have as many columns as number_of_1_loci + 2*number_of_2_loci");
+  }
+  if (y.nrow() != number_of_clusters){
+    Rcpp::stop("y should have as many rows as length of tau");
+  }
+  if (y.ncol() != number_of_1_loci + 2*number_of_2_loci){
+    Rcpp::stop("y should have as many columns as number_of_1_loci + 2 * number_of_2_loci");
+  }
+  if (pi.nrow() != number_of_clusters){
+    Rcpp::stop("pi should have as many rows as length of tau");
+  }
+  if (pi.ncol() != number_of_loci){
+    Rcpp::stop("pi should have as many columns as number of loci");
+  }
+  
+  // make sure tau is valid
+  for(int i = 0; i < tau.size(); i++){
+    if (tau[i] < 0 || tau[i] >1) return R_NegInf;
+  }
+  
+  // pre-compute part of the discrete Laplace pmf for each cluster and locus
+  std::vector<NumericMatrix> prs_by_cluster = precompute_dlm_powers(p_by_cluster_and_locus);
+  
+  double loglik = 0.0;
+  
+  // for each profile
+  for(int i = 0; i < n; i++){
+    double pr = 0.0;
+    
+    // compute the pr. in each cluster
+    for(int i_cluster = 0; i_cluster < number_of_clusters; i_cluster++){
+      
+      double pr_cluster = compute_profile_pr_ns(i, i_cluster, prs_by_cluster, 
+                                             db, y, pi, q,
+                                             number_of_1_loci, number_of_2_loci);
+      
+      pr += tau[i_cluster] * pr_cluster;
+    }
+    
+    loglik += std::log(pr);
+  }
+  
+  return loglik;
+}
 
 // [[Rcpp::export]]
 double neg_loglik_theta(NumericVector theta, IntegerMatrix db, IntegerMatrix y,
@@ -274,6 +416,53 @@ NumericMatrix compute_profile_prs(NumericMatrix p_by_cluster_and_locus, IntegerM
 }
 
 // [[Rcpp::export]]
+NumericMatrix compute_profile_prs_ns(NumericMatrix p_by_cluster_and_locus, IntegerMatrix db, IntegerMatrix y,
+                                     NumericMatrix pi, NumericMatrix q,
+                                  int number_of_1_loci, int number_of_2_loci) {
+  
+  int n = db.nrow();
+  
+  int number_of_loci = number_of_1_loci + number_of_2_loci;
+  int number_of_clusters = p_by_cluster_and_locus.nrow();
+  
+  NumericMatrix pr(n, number_of_clusters);
+  
+  if (p_by_cluster_and_locus.ncol() != number_of_loci){
+    Rcpp::stop("p should have as many columns as number of loci");
+  }
+  if (db.ncol() != number_of_1_loci + 2*number_of_2_loci){
+    Rcpp::stop("db should have as many columns as number_of_1_loci + 2*number_of_2_loci");
+  }
+  if (y.nrow() != number_of_clusters){
+    Rcpp::stop("y should have as many rows as length of tau");
+  }
+  if (y.ncol() != number_of_1_loci + 2*number_of_2_loci){
+    Rcpp::stop("y should have as many columns as number_of_1_loci + 2 * number_of_2_loci");
+  }
+  
+  // pre-compute part of the discrete Laplace pmf for each cluster and locus
+  std::vector<NumericMatrix> prs_by_cluster = precompute_dlm_powers(p_by_cluster_and_locus);
+  
+  double loglik = 0.0;
+  
+  // for each profile
+  for(int i = 0; i < n; i++){
+    
+    // compute the pr. in each cluster
+    for(int i_cluster = 0; i_cluster < number_of_clusters; i_cluster++){
+      
+      double pr_cluster = compute_profile_pr_ns(i, i_cluster, prs_by_cluster, 
+                                             db, y, pi, q,
+                                             number_of_1_loci, number_of_2_loci);
+      
+      pr(i, i_cluster) = pr_cluster;
+    }
+  }
+  
+  return pr;
+}
+
+// [[Rcpp::export]]
 NumericMatrix compute_posterior_cluster_prs(NumericMatrix profile_pr, NumericVector tau){
   int n = profile_pr.nrow();
   int number_of_clusters = profile_pr.ncol();
@@ -297,4 +486,24 @@ NumericMatrix compute_posterior_cluster_prs(NumericMatrix profile_pr, NumericVec
   }
   
   return posterior;
+}
+
+// [[Rcpp::export]]
+double neg_loglik_theta_ns(NumericVector theta, IntegerMatrix db, IntegerMatrix y,
+                           NumericMatrix pi, NumericMatrix q,
+                        int number_of_1_loci, int number_of_2_loci) {
+  // theta is the parameter vector (parametrises the variances)
+  // pi contains the pr. of a non-standard haplotype by cluster (row) and locus (column)
+  // q  contains the pr's of each non-standard haplotype (row) by cluster (column)
+  
+  int number_of_loci = number_of_1_loci + number_of_2_loci;
+  int number_of_clusters = y.nrow();
+  
+  // obtain model parameters from theta
+  NumericVector tau = get_tau(theta, number_of_loci, number_of_clusters);
+  NumericMatrix p = get_P(theta, number_of_loci, number_of_clusters);
+  
+  double ll = loglik_tau_p_ns(tau, p, db, y, pi, q, number_of_1_loci, number_of_2_loci);
+  
+  return -ll;
 }
