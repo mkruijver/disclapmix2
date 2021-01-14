@@ -1,4 +1,3 @@
-
 check_input_db <- function(x){
   if (!is.data.frame(x)) stop("x should be a data frame")
   if (!all(sapply(x,is.character))) stop("columns of x should be character vectors")
@@ -83,9 +82,11 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   
   # assign index
   non_standard_df$index <- -seq_len(nrow(non_standard_df))
-  removed_non_standard_df$index <- non_standard_df$index[match(
-    paste0(removed_non_standard_df$locus, "___", removed_non_standard_df$haplotype),
-    paste0(non_standard_df$locus, "___", non_standard_df$haplotype))]
+  if (nrow(non_standard_df) > 0){
+    removed_non_standard_df$index <- non_standard_df$index[match(
+      paste0(removed_non_standard_df$locus, "___", removed_non_standard_df$haplotype),
+      paste0(non_standard_df$locus, "___", non_standard_df$haplotype))]
+  }
   
   if (verbose>=1){
     if (nrow(removed_non_standard_df>1)){
