@@ -1,7 +1,7 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
-const int number_of_precomputed_powers = 16;
+const int number_of_precomputed_powers = 32;
 
 // [[Rcpp::export]]
 NumericMatrix get_P(NumericVector theta, int number_of_loci, int number_of_clusters) {
@@ -71,7 +71,7 @@ NumericVector get_tau(NumericVector theta, int number_of_loci, int number_of_clu
     tau_cum += tau_i;
   }
   
-  tau[number_of_clusters - 1] = 1.0 - tau_cum;
+  tau[number_of_clusters - 1] = std::max(0.0, 1.0 - tau_cum);
   
   return tau;
 }
@@ -110,13 +110,18 @@ double compute_profile_pr(int i, int i_cluster, std::vector<NumericMatrix> &prs_
   
   // pr. for the 1-loci
   for(int i_locus = 0; i_locus < number_of_1_loci; i_locus++){
-    
-    if (db(i, i_locus) == NA_INTEGER) continue;
+    int x = db(i, i_locus);
+    if (x == NA_INTEGER) continue;
     
     // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
-    int delta = std::abs(db(i,i_locus) - y(i_cluster, i_locus));
-    if (delta >= number_of_precomputed_powers) Rcpp::stop("range outside of pre-computations");
-    
+    int delta = std::abs(x - y(i_cluster, i_locus));
+    if (delta >= number_of_precomputed_powers){
+      std::string error_message = "range outside of pre-computations: x=" + 
+        std::to_string(x) + " y=" + std::to_string(y(i_cluster, i_locus));
+      
+      Rcpp::stop(error_message);
+      
+    } 
     pr_cluster *= prs_by_cluster[i_cluster](delta, i_locus);
   }
   
@@ -261,8 +266,14 @@ double loglik_tau_p(NumericVector tau, NumericMatrix p_by_cluster_and_locus, Int
   }
   
   // make sure tau is valid
+  double tau_sum = 0.0;
+  double tau_penalty = 0.0;
   for(int i = 0; i < tau.size(); i++){
-    if (tau[i] < 0 || tau[i] >1) return R_NegInf;
+    tau_sum += tau[i];
+    if (tau[i] < 0) return R_NegInf;
+  }
+  if (tau_sum > 1){
+    tau_penalty -= (tau_sum-1) * 1e7;  
   }
   
   // pre-compute part of the discrete Laplace pmf for each cluster and locus
@@ -286,7 +297,7 @@ double loglik_tau_p(NumericVector tau, NumericMatrix p_by_cluster_and_locus, Int
     loglik += std::log(pr);
   }
   
-  return loglik;
+  return loglik + tau_penalty;
 }
 
 // [[Rcpp::export]]

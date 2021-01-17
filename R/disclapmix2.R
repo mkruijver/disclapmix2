@@ -1,6 +1,12 @@
 check_input_db <- function(x){
   if (!is.data.frame(x)) stop("x should be a data frame")
   if (!all(sapply(x,is.character))) stop("columns of x should be character vectors")
+  
+  x_unlist <- unlist(x)
+  illegal_haplotypes <- x_unlist[grep(" ", x_unlist)]
+  if (length(illegal_haplotypes) > 1){
+    stop("Found haplotypes containing space: ", illegal_haplotypes)
+  }
 }
 
 to_int_db <- function(x, one_loci, two_loci){
@@ -13,7 +19,8 @@ to_int_db <- function(x, one_loci, two_loci){
   if(length(two_loci) > 0) colnames(x_int_two_loci) <- paste0(rep(two_loci, each=2),c("(1)","(2)"))
   
   for( locus in two_loci){
-    locus_split <- ifelse(is.na(x[,locus]), yes = list(c(NA_character_,NA_character_)), no =strsplit(x[,locus], split = ","))
+    x_locus <- x[,locus]
+    locus_split <- ifelse(is.na(x_locus), yes = list(c(NA_character_,NA_character_)), no =strsplit(x_locus, split = ","))
     
     x_int_two_loci[,paste0(locus,c("(1)","(2)"))] <- matrix(as.integer(unlist(locus_split)), nrow = nrow(x), ncol=2,byrow = TRUE)
   }
@@ -23,13 +30,27 @@ to_int_db <- function(x, one_loci, two_loci){
   x_int
 }
 
+# load("C:/Work/2021/R/y23_2014-05-23.RData")
+# x <- as.data.frame(apply(y23$haplotypes$integer_alleles$db, 2,as.character))
+# verbose=2L
+# number_of_clusters = 20L
+# include_2_loci = FALSE
+# remove_non_standard_haplotypes = FALSE
+# initial_y_method = "clara"
+# use_stripped_data_for_initial_clustering=TRUE
+
 #' @export
-disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_non_standard_haplotypes = TRUE, verbose=0L){
+disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_non_standard_haplotypes = TRUE, 
+                        use_stripped_data_for_initial_clustering = FALSE, initial_y_method = "pam",
+                        verbose=0L){
   
   check_input_db(x)
+  if (!(isTRUE(initial_y_method %in% c("pam", "clara")))){
+    stop("initial_y_method needs to be \"pam\" or \"clara\"")
+  }
   
   if (verbose>=1) disclapmix2:::verbose_print("Determining loci with suitable data")
-  x_summarised <- disclapmix2::summarise_db(x)
+  x_summarised <- summarise_db(x)
   
   # clean the data such that 1-loci only have 1 integer or NA
   # and 2-loci only have 2 integers or NA
@@ -53,22 +74,26 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   removed_non_standard_dfs <- list()
   
   # locus = "DYS458"
-  
   for(locus in one_loci){
-    ind_1 <- x_summarised$x_ind_12_other[,locus]=="1"
+    ind_1 <- which(x_summarised$x_ind_12_other[,locus]=="1")
+    not_ind_1 <- which(sapply(x_summarised$x_ind_12_other[,locus]!="1", isTRUE))
+    
     x_cleaned[ind_1,locus] <- x[[locus]][ind_1]
     
-    number_removed <- sum(!ind_1)
-    removed_non_standard_dfs[[1+length(removed_non_standard_dfs)]] <- data.frame(row = which(!ind_1), locus=rep(locus, number_removed), haplotype=x[[locus]][!ind_1])
+    number_removed <- length(not_ind_1)
+    removed_non_standard_dfs[[1+length(removed_non_standard_dfs)]] <- data.frame(row = not_ind_1, locus=rep(locus, number_removed), haplotype=x[[locus]][not_ind_1])
   }
   
   if(number_of_2_loci > 0){
     for(locus in two_loci){
-      ind_2 <- x_summarised$x_ind_12_other[,locus]=="2"
+      ind_2 <- which(x_summarised$x_ind_12_other[,locus]=="2")
+      not_ind_2 <- which(sapply(x_summarised$x_ind_12_other[,locus]!="2", isTRUE))
+
       x_cleaned[ind_2,locus] <- x[[locus]][ind_2]
       
-      number_removed <- sum(!ind_2)
-      removed_non_standard_dfs[[1+length(removed_non_standard_dfs)]] <- data.frame(row = which(!ind_2), locus=rep(locus, number_removed), haplotype=x[[locus]][!ind_2])
+      number_removed <- length(not_ind_2)
+      
+      removed_non_standard_dfs[[1+length(removed_non_standard_dfs)]] <- data.frame(row = not_ind_2, locus=rep(locus, number_removed), haplotype=x[[locus]][not_ind_2])
     }
   }
   
@@ -116,21 +141,45 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   }
   
   if (verbose>=1) disclapmix2:::verbose_print(nrow(x_int) , paste0("profiles used in analysis (started with ", nrow(x),")"))
-  if (verbose>=1) disclapmix2:::verbose_print("Determining initial clustering using PAM")
+  if (verbose>=1) disclapmix2:::verbose_print("Determining initial clustering using", initial_y_method)
   
-  initial_pam <- cluster::pam(x_int, k = number_of_clusters, metric = "manhattan",diss = FALSE, keep.diss=FALSE, keep.data=TRUE)
-  
-  if (anyNA(initial_pam$medoids)){
-    if (verbose>=1) disclapmix2:::verbose_print("NAs in initial clustering, retrying with stripped data")
-    initial_pam <- cluster::pam(x_stripped_int, k = number_of_clusters, metric = "manhattan",diss = FALSE, keep.diss=FALSE, keep.data=TRUE)
+  if (!use_stripped_data_for_initial_clustering){
+    
+    if (initial_y_method=="pam"){
+      initial_clustering <- cluster::pam(x_int, k = number_of_clusters, metric = "manhattan",diss = FALSE, keep.diss=FALSE, keep.data=TRUE)
+    }
+    else{
+      initial_clustering <- cluster::clara(x_int, k = number_of_clusters, metric = "manhattan",pamLike = TRUE,samples=100)
+    }
+    
+    if (anyNA(initial_clustering$medoids)){
+      use_stripped_data_for_initial_clustering <- TRUE
+      if (verbose>=1) disclapmix2:::verbose_print("NAs in initial clustering, retrying with stripped data")    }
+  }else{
+    if (verbose>=1) disclapmix2:::verbose_print("Using stripped data for initial clustering")
   }
   
-  initial_pam_tau <- (tabulate(initial_pam$clustering, nbins = number_of_clusters)/nrow(x_int))
+  if (use_stripped_data_for_initial_clustering){
+    
+    if (initial_y_method == "pam"){
+      initial_clustering <- cluster::pam(x_stripped_int, k = number_of_clusters, 
+                                         metric = "manhattan",diss = FALSE, keep.diss=FALSE, keep.data=TRUE)
+    }
+    else{
+      initial_clustering <- cluster::clara(x_stripped_int, k = number_of_clusters,
+                                           metric = "manhattan", pamLike = TRUE, samples=100)
+      
+    }
+    
+  }
+  
+  initial_pam_tau <- (tabulate(initial_clustering$clustering, nbins = number_of_clusters)/nrow(x_int))
   initial_pam_theta_tau <- if(number_of_clusters==1L) numeric() else log( initial_pam_tau[1:(number_of_clusters-1)])
   
   # now find the variances
-  y <- y0 <- initial_pam$medoids
+  y <- y0 <- initial_clustering$medoids
   theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-1,number_of_clusters), rep(0,number_of_loci-1)) else rep(-1,number_of_loci)
+  theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-0.5,number_of_clusters), rep(-0.5,number_of_loci-1)) else rep(-1,number_of_loci)
   
   if (verbose>=1) disclapmix2:::verbose_print("Starting optimisation")
   
@@ -145,17 +194,29 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
     
     # optim
     f <- function(theta) {
-      negll <- disclapmix2:::neg_loglik_theta(theta, x_int, y, number_of_1_loci, number_of_2_loci)
+      negll <- neg_loglik_theta(theta, x_int, y, number_of_1_loci, number_of_2_loci)
       
+      # print(theta)
+      # print(negll)
       # if (is.nan(negll) || is.infinite(negll)){
       #   theta_fail <<- theta
-      #   browser()
       # }
       negll
     }
     
-    opt <- stats::optim(par = theta, fn = f, method = "BFGS", control = list(reltol = 1e-16))
+    opt <- stats::optim(par = theta, fn = f, method = "BFGS", control = list(maxit=500, reltol = 1e-9, trace=verbose-1))
     if (opt$convergence != 0) stop("BFGS failed to converge")
+    # opt2 <- stats::optim(par = opt$par, fn = f, method = "BFGS", control = list(maxit=500, reltol = 1e-9))
+    # 
+    # disclapmix2:::neg_loglik_theta(theta_fail, x_int, y, number_of_1_loci, number_of_2_loci)
+    # 
+    # tau_fail <- disclapmix2:::get_tau(theta_fail, number_of_loci, number_of_clusters)
+    # tau_fail
+    # # 
+    # p_fail <- disclapmix2:::get_P(theta_fail, number_of_loci, number_of_clusters)
+    # pr_fail <- disclapmix2:::compute_profile_prs(p_by_cluster_and_locus = p_fail, db = x_int, y = y, number_of_1_loci, number_of_2_loci)
+    # 
+    # sort(apply(pr_fail,1,max))
     
     theta_opt <- opt$par
     theta_iterations[[1+length(theta_iterations)]] <- theta_opt
