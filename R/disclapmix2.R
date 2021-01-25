@@ -265,85 +265,94 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   }
   
   if((!remove_non_standard_haplotypes) & (nrow(removed_non_standard_df)>0)){
-    disclapmix2:::verbose_print(nrow(removed_non_standard_df), "observations of",
-                                nrow(non_standard_df),
-                                "non-standard haplotypes were ignored, second stage estimation begins")
     
-    # relabel the matrix such that non-standard alleles get negative indices
-    x_int_ns <- x_int
-    for(i in seq_len(nrow(removed_non_standard_df))){
-      locus <- removed_non_standard_df$locus[i]
-      column <- if (locus %in% one_loci) locus else paste0(locus, "(1)")
-      x_int_ns[removed_non_standard_df$row[i], column] <- removed_non_standard_df$index[i]
-    }
-    if (verbose>=2){
-      disclapmix2:::verbose_print("Relabeled data has", sum(x_int_ns<0, na.rm = TRUE), "negative indices")
-    }
-    ns_locus_haplotype <- paste0(non_standard_df$locus,"_", non_standard_df$haplotype)
-    dimnames_q <- list(ns_locus_haplotype, cluster_labels)
-    
-    # keep trying to estimate pi,q and p until convergence
-    pi_opt <- estimate_pr_ns(x = x_int_ns, v = v_matrix, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci, locus_names = loci)
-    q_opt <- estimate_q(x = x_int_ns, v = v_matrix, non_standard_haplotypes = non_standard_df, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci)
-    dimnames(q_opt) <- dimnames_q
-    
-    conv <- FALSE
-    while(!conv){
+    repeat{
+      disclapmix2:::verbose_print(nrow(removed_non_standard_df), "observations of",
+                                  nrow(non_standard_df),
+                                  "non-standard haplotypes were ignored, second stage estimation begins")
       
-      # optimise the variances again including the non-standard haplotypes
-      f_ns <- function(theta) {
-        negll <- neg_loglik_theta_ns(theta, x_int_ns, y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
+      # relabel the matrix such that non-standard alleles get negative indices
+      x_int_ns <- x_int
+      for(i in seq_len(nrow(removed_non_standard_df))){
+        locus <- removed_non_standard_df$locus[i]
+        column <- if (locus %in% one_loci) locus else paste0(locus, "(1)")
+        x_int_ns[removed_non_standard_df$row[i], column] <- removed_non_standard_df$index[i]
+      }
+      if (verbose>=2){
+        disclapmix2:::verbose_print("Relabeled data has", sum(x_int_ns<0, na.rm = TRUE), "negative indices")
+      }
+      ns_locus_haplotype <- paste0(non_standard_df$locus,"_", non_standard_df$haplotype)
+      dimnames_q <- list(ns_locus_haplotype, cluster_labels)
+      
+      # keep trying to estimate pi,q and p until convergence
+      pi_opt <- estimate_pr_ns(x = x_int_ns, v = v_matrix, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci, locus_names = loci)
+      q_opt <- estimate_q(x = x_int_ns, v = v_matrix, non_standard_haplotypes = non_standard_df, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci)
+      dimnames(q_opt) <- dimnames_q
+      
+      conv <- FALSE
+      while(!conv){
         
-        # if (is.nan(negll) || is.infinite(negll)){
-        #   theta_fail <<- theta
-        #   browser()
-        # }
-        negll
+        # optimise the variances again including the non-standard haplotypes
+        f_ns <- function(theta) {
+          negll <- neg_loglik_theta_ns(theta, x_int_ns, y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
+          
+          # if (is.nan(negll) || is.infinite(negll)){
+          #   theta_fail <<- theta
+          #   browser()
+          # }
+          negll
+        }
+        
+        opt_ns <- stats::optim(par = theta, fn = f_ns, method = "BFGS", control = list(reltol = 1e-16))
+        if (opt$convergence != 0) stop("BFGS failed to converge")
+        theta <- opt_ns$par
+        
+        # make v-matrix again
+        tau_opt <- disclapmix2:::get_tau(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
+        p_opt <- disclapmix2:::get_P(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
+        rownames(p_opt) <- cluster_labels
+        colnames(p_opt) <- loci
+        
+        # recreate the v matrix
+        x_profile_pr_by_cluster <- disclapmix2:::compute_profile_prs_ns(p_by_cluster_and_locus = p_opt, db = x_int, y = y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
+        v_matrix <- disclapmix2:::compute_posterior_cluster_prs(profile_pr = x_profile_pr_by_cluster, tau = tau_opt)
+        
+        # estimate pi
+        pi_opt_next <- estimate_pr_ns(x = x_int_ns, v = v_matrix, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci, locus_names = loci)
+        
+        # estimate q
+        q_opt_next <- estimate_q(x = x_int_ns, v = v_matrix, non_standard_haplotypes = non_standard_df, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci)
+        dimnames(q_opt_next) <- dimnames_q
+        
+        abs_diff_pi <- sum(abs(pi_opt_next - pi_opt))
+        abs_diff_q <- sum(abs(q_opt_next - q_opt))
+        
+        if (verbose >=2){
+          disclapmix2:::verbose_print("Abs difference in pi:", abs_diff_pi)
+          disclapmix2:::verbose_print("Abs difference in q:", abs_diff_q)
+        }
+        
+        conv <- abs_diff_pi<1e-12 & abs_diff_q <1e-12
+        pi_opt <- pi_opt_next
+        q_opt <- q_opt_next
       }
       
-      opt_ns <- stats::optim(par = theta, fn = f_ns, method = "BFGS", control = list(reltol = 1e-16))
-      if (opt$convergence != 0) stop("BFGS failed to converge")
-      theta <- opt_ns$par
+      # check if the centers are optimal
+      y_new <- disclapmix2:::move_centers(x_int, y, v_matrix) # note that we need NAs for non-standard haplotypes here
       
-      # make v-matrix again
-      tau_opt <- disclapmix2:::get_tau(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
-      p_opt <- disclapmix2:::get_P(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
-      rownames(p_opt) <- cluster_labels
-      colnames(p_opt) <- loci
+      dist_new_y <- sum(abs(y - y_new))
       
-      # recreate the v matrix
-      x_profile_pr_by_cluster <- disclapmix2:::compute_profile_prs_ns(p_by_cluster_and_locus = p_opt, db = x_int, y = y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
-      v_matrix <- disclapmix2:::compute_posterior_cluster_prs(profile_pr = x_profile_pr_by_cluster, tau = tau_opt)
-      
-      # estimate pi
-      pi_opt_next <- estimate_pr_ns(x = x_int_ns, v = v_matrix, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci, locus_names = loci)
-      
-      # estimate q
-      q_opt_next <- estimate_q(x = x_int_ns, v = v_matrix, non_standard_haplotypes = non_standard_df, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci)
-      dimnames(q_opt_next) <- dimnames_q
-  
-      abs_diff_pi <- sum(abs(pi_opt_next - pi_opt))
-      abs_diff_q <- sum(abs(q_opt_next - q_opt))
-                         
-      if (verbose >=2){
-        disclapmix2:::verbose_print("Abs difference in pi:", abs_diff_pi)
-        disclapmix2:::verbose_print("Abs difference in q:", abs_diff_q)
+      if (dist_new_y > 0){
+        disclapmix2:::verbose_print("Centers need to be moved after second stage")
+        disclapmix2:::verbose_print("Number of stepwise mutations between center configurations = ", dist_new_y)
+        
+        y <- y_new
+      } 
+      else{
+        disclapmix2:::verbose_print("Second stage finished: centers need not be moved")
+        break
       }
-      
-      conv <- abs_diff_pi==0 & abs_diff_q == 0
-      pi_opt <- pi_opt_next
-      q_opt <- q_opt_next
     }
-    
-    # check if the centers are optimal
-    y_new <- disclapmix2:::move_centers(x_int, y, v_matrix) # note that we need NAs for non-standard haplotypes here
-
-    dist_new_y <- sum(abs(y - y_new))
-    if (dist_new_y > 0){
-      stop("Centers need to be moved after second stage: not implemented")
-    } 
-    
-    disclapmix2:::verbose_print("Second stage finished: centers need not be moved")
   }
   
   number_of_iterations <- length(y_iterations)
@@ -365,6 +374,8 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
     y = y, p = p_opt
   )
   
+  if(exists("x_int_ns")) ret$x_int_ns <- x_int_ns
+  if(exists("x_stripped_int")) ret$x_stripped_int <- x_stripped_int
   if(exists("pi_opt")) ret$pi <- pi_opt
   if(exists("q_opt")) ret$q <- q_opt
   
