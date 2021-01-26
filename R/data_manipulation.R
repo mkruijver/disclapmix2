@@ -1,6 +1,7 @@
 filter_integer_alleles <- function(haplotypes_unpacked){
   lapply(haplotypes_unpacked, function(h){
     h_int <- as.integer(h[as.character(suppressWarnings(as.integer(h)))==h])
+    h_int <- h_int[h_int>0]
   })
 }
 

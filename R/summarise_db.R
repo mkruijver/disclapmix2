@@ -9,7 +9,7 @@ summarise_db <- function(x){
   colnames(x_is_12other) <- colnames(tab_12other) <- loci
   
   x_unpacked <- list()
-  locus="DYS448"
+
   for(locus in loci){
     x_locus <- x[[locus]]
     
