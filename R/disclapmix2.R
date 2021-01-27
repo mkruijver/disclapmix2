@@ -188,36 +188,21 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   y_iterations <- list()
   theta_iterations <- list()
   
+  optim_trace <- if (verbose>0) verbose - 1 else 0
+  
   repeat{
     rownames(y) <- cluster_labels
     y_iterations[[1 + length(y_iterations)]] <- y
     
-    # optim
     f <- function(theta) {
       negll <- neg_loglik_theta(theta, x_int, y, number_of_1_loci, number_of_2_loci)
       
-      # print(theta)
-      # print(negll)
-      # if (is.nan(negll) || is.infinite(negll)){
-      #   theta_fail <<- theta
-      # }
       negll
     }
     
-    opt <- stats::optim(par = theta, fn = f, method = "BFGS", control = list(maxit=500, reltol = 1e-9, trace=verbose-1))
+    opt <- stats::optim(par = theta, fn = f, method = "BFGS", control = list(maxit=500, reltol = 1e-9, trace=optim_trace))
     if (opt$convergence != 0) stop("BFGS failed to converge")
-    # opt2 <- stats::optim(par = opt$par, fn = f, method = "BFGS", control = list(maxit=500, reltol = 1e-9))
-    # 
-    # disclapmix2:::neg_loglik_theta(theta_fail, x_int, y, number_of_1_loci, number_of_2_loci)
-    # 
-    # tau_fail <- disclapmix2:::get_tau(theta_fail, number_of_loci, number_of_clusters)
-    # tau_fail
-    # # 
-    # p_fail <- disclapmix2:::get_P(theta_fail, number_of_loci, number_of_clusters)
-    # pr_fail <- disclapmix2:::compute_profile_prs(p_by_cluster_and_locus = p_fail, db = x_int, y = y, number_of_1_loci, number_of_2_loci)
-    # 
-    # sort(apply(pr_fail,1,max))
-    
+
     theta_opt <- opt$par
     theta_iterations[[1+length(theta_iterations)]] <- theta_opt
     
@@ -303,7 +288,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
           negll
         }
         
-        opt_ns <- stats::optim(par = theta, fn = f_ns, method = "BFGS", control = list(reltol = 1e-16))
+        opt_ns <- stats::optim(par = theta, fn = f_ns, method = "BFGS", control = list(reltol = 1e-16, trace = optim_trace))
         if (opt$convergence != 0) stop("BFGS failed to converge")
         theta <- opt_ns$par
         
@@ -378,6 +363,14 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   if(exists("x_stripped_int")) ret$x_stripped_int <- x_stripped_int
   if(exists("pi_opt")) ret$pi <- pi_opt
   if(exists("q_opt")) ret$q <- q_opt
+  
+  if(!exists("q_opt")){
+    ret$number_of_parameters <- length(theta) + length(y)
+    ret$BIC <- -2 * log_lik + ret$number_of_parameters * log(length(x_int))
+  }else{
+    ret$number_of_parameters <- length(theta) + length(y) + length(q_opt)
+    ret$BIC <- -2 * log_lik + ret$number_of_parameters * log(length(x_int_ns))
+  }
   
   ret$tau <- tau_opt
   
