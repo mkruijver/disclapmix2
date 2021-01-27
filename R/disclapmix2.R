@@ -149,7 +149,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
       initial_clustering <- cluster::pam(x_int, k = number_of_clusters, metric = "manhattan",diss = FALSE, keep.diss=FALSE, keep.data=TRUE)
     }
     else{
-      initial_clustering <- cluster::clara(x_int, k = number_of_clusters, metric = "manhattan",pamLike = TRUE,samples=100)
+      initial_clustering <- cluster::clara(x_int, k = number_of_clusters, metric = "manhattan",pamLike = TRUE,samples=100, correct.d = TRUE)
     }
     
     if (anyNA(initial_clustering$medoids)){
@@ -167,7 +167,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
     }
     else{
       initial_clustering <- cluster::clara(x_stripped_int, k = number_of_clusters,
-                                           metric = "manhattan", pamLike = TRUE, samples=100)
+                                           metric = "manhattan", pamLike = TRUE, samples=100, correct.d = TRUE)
       
     }
     
