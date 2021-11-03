@@ -5,6 +5,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // get_P
 NumericMatrix get_P(NumericVector theta, int number_of_loci, int number_of_clusters);
 RcppExport SEXP _disclapmix2_get_P(SEXP thetaSEXP, SEXP number_of_lociSEXP, SEXP number_of_clustersSEXP) {
