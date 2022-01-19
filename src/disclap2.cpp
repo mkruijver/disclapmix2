@@ -143,8 +143,8 @@ double compute_profile_pr(int i, int i_cluster, std::vector<NumericMatrix> &prs_
     int delta_a_a = std::abs(x_a - y_a);
     int delta_b_b = std::abs(x_b - y_b);
     
-    int delta_b_a = std::abs(x_a - y_a);
-    int delta_a_b = std::abs(x_b - y_b);
+    int delta_b_a = std::abs(x_b - y_a);
+    int delta_a_b = std::abs(x_a - y_b);
     
     if (delta_a_a >= number_of_precomputed_powers || delta_b_b >= number_of_precomputed_powers 
           || delta_b_a >= number_of_precomputed_powers || delta_a_b >= number_of_precomputed_powers){
@@ -215,8 +215,8 @@ double compute_profile_pr_ns(int i, int i_cluster, std::vector<NumericMatrix> &p
         int delta_a_a = std::abs(x_a - y_a);
         int delta_b_b = std::abs(x_b - y_b);
         
-        int delta_b_a = std::abs(x_a - y_a);
-        int delta_a_b = std::abs(x_b - y_b);
+        int delta_b_a = std::abs(x_b - y_a);
+        int delta_a_b = std::abs(x_a - y_b);
         
         if (delta_a_a >= number_of_precomputed_powers || delta_b_b >= number_of_precomputed_powers 
               || delta_b_a >= number_of_precomputed_powers || delta_a_b >= number_of_precomputed_powers){
