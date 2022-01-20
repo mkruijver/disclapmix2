@@ -224,7 +224,7 @@ double compute_profile_pr_ns(int i, int i_cluster, std::vector<NumericMatrix> &p
         } 
         
         // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
-        pr_cluster *= 0.5 * 
+        pr_cluster *= (1.0 - pi(i_cluster, i_locus)) * 0.5 * 
           (prs_by_cluster[i_cluster](delta_a_a, i_locus) * prs_by_cluster[i_cluster](delta_b_b, i_locus) +
           prs_by_cluster[i_cluster](delta_b_a, i_locus) * prs_by_cluster[i_cluster](delta_a_b, i_locus));
         
