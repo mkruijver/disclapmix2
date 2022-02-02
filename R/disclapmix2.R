@@ -12,7 +12,8 @@ check_input_db <- function(x){
 to_int_db <- function(x, one_loci, two_loci){
   
   # convert the stripped down db to an integer matrix
-  x_int_one_loci <- matrix(as.integer(x[, one_loci]), nrow=nrow(x))
+  x_int_one_loci <- matrix(as.integer(unlist(x[, one_loci])), 
+                           nrow = nrow(x))
   colnames(x_int_one_loci) <- one_loci
   
   x_int_two_loci <- matrix(integer(), nrow=nrow(x), ncol=2 * length(two_loci))

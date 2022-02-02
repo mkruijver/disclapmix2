@@ -10,7 +10,7 @@ License: GPL (>= 2)
 Imports: Rcpp (>= 1.0.3)
 Depends: cluster, readxl
 LinkingTo: Rcpp
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 SystemRequirements: C++11
 Suggests: 
     testthat

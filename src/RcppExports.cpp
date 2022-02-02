@@ -100,6 +100,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// compute_profiles_pr_by_cluster_and_locus
+List compute_profiles_pr_by_cluster_and_locus(NumericMatrix p_by_cluster_and_locus, IntegerMatrix x, IntegerMatrix y, int number_of_1_loci, int number_of_2_loci);
+RcppExport SEXP _disclapmix2_compute_profiles_pr_by_cluster_and_locus(SEXP p_by_cluster_and_locusSEXP, SEXP xSEXP, SEXP ySEXP, SEXP number_of_1_lociSEXP, SEXP number_of_2_lociSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type p_by_cluster_and_locus(p_by_cluster_and_locusSEXP);
+    Rcpp::traits::input_parameter< IntegerMatrix >::type x(xSEXP);
+    Rcpp::traits::input_parameter< IntegerMatrix >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type number_of_1_loci(number_of_1_lociSEXP);
+    Rcpp::traits::input_parameter< int >::type number_of_2_loci(number_of_2_lociSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_profiles_pr_by_cluster_and_locus(p_by_cluster_and_locus, x, y, number_of_1_loci, number_of_2_loci));
+    return rcpp_result_gen;
+END_RCPP
+}
 // compute_profile_prs_ns
 NumericMatrix compute_profile_prs_ns(NumericMatrix p_by_cluster_and_locus, IntegerMatrix db, IntegerMatrix y, NumericMatrix pi, NumericMatrix q, int number_of_1_loci, int number_of_2_loci);
 RcppExport SEXP _disclapmix2_compute_profile_prs_ns(SEXP p_by_cluster_and_locusSEXP, SEXP dbSEXP, SEXP ySEXP, SEXP piSEXP, SEXP qSEXP, SEXP number_of_1_lociSEXP, SEXP number_of_2_lociSEXP) {
@@ -184,6 +199,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_disclapmix2_loglik_tau_p_ns", (DL_FUNC) &_disclapmix2_loglik_tau_p_ns, 8},
     {"_disclapmix2_neg_loglik_theta", (DL_FUNC) &_disclapmix2_neg_loglik_theta, 5},
     {"_disclapmix2_compute_profile_prs", (DL_FUNC) &_disclapmix2_compute_profile_prs, 5},
+    {"_disclapmix2_compute_profiles_pr_by_cluster_and_locus", (DL_FUNC) &_disclapmix2_compute_profiles_pr_by_cluster_and_locus, 5},
     {"_disclapmix2_compute_profile_prs_ns", (DL_FUNC) &_disclapmix2_compute_profile_prs_ns, 7},
     {"_disclapmix2_compute_posterior_cluster_prs", (DL_FUNC) &_disclapmix2_compute_posterior_cluster_prs, 2},
     {"_disclapmix2_neg_loglik_theta_ns", (DL_FUNC) &_disclapmix2_neg_loglik_theta_ns, 7},
