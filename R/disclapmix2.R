@@ -374,5 +374,8 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   
   ret$tau <- tau_opt
   
+  ret$one_loci <- one_loci
+  ret$two_loci <- two_loci
+  
   ret
 }
