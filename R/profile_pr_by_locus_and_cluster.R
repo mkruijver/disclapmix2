@@ -38,7 +38,7 @@ profile_pr_by_locus_and_cluster <- function(x, fit){
   x_ordered_character_filtered[ns_idx] <- NA
   
   # convert to integer matrix
-  x_int <- disclapmix2:::to_int_db(x_ordered_character_filtered[1:2,,drop=FALSE], 
+  x_int <- disclapmix2:::to_int_db(x_ordered_character_filtered, 
                                    fit$one_loci, fit$two_loci)
   
   
