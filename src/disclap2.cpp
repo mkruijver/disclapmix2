@@ -103,6 +103,23 @@ std::vector<NumericMatrix> precompute_dlm_powers(NumericMatrix p_by_cluster_and_
   return prs_by_cluster;
 }
 
+void range_error(int x, int y, int i_profile){
+      std::string error_message = "range outside of pre-computations: x=" + 
+        std::to_string(x) + " y=" + std::to_string(y) + 
+		" row = " + std::to_string(i_profile + 1);
+      
+      Rcpp::stop(error_message);
+}
+
+void range_error(int xa, int xb, int ya, int yb, int i_profile){
+      std::string error_message = "range outside of pre-computations: x=" + 
+        std::to_string(xa) + "," +  std::to_string(xb) +
+		" y=" + std::to_string(ya) + "," +  std::to_string(yb)+ 
+		" row = " + std::to_string(i_profile + 1);
+
+      Rcpp::stop(error_message);
+}
+
 double compute_profile_pr_locus(int i_profile, int i_cluster, int i_locus,
                         std::vector<NumericMatrix> &prs_by_cluster, 
                         IntegerMatrix &db, IntegerMatrix &y, 
@@ -118,11 +135,7 @@ double compute_profile_pr_locus(int i_profile, int i_cluster, int i_locus,
     // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
     int delta = std::abs(x - y(i_cluster, i_locus));
     if (delta >= number_of_precomputed_powers){
-      std::string error_message = "range outside of pre-computations: x=" + 
-        std::to_string(x) + " y=" + std::to_string(y(i_cluster, i_locus));
-      
-      Rcpp::stop(error_message);
-      
+      range_error(x, y(i_cluster, i_locus), i_profile);
     } 
     
     return(prs_by_cluster[i_cluster](delta, i_locus));
@@ -153,7 +166,7 @@ double compute_profile_pr_locus(int i_profile, int i_cluster, int i_locus,
     
     if (delta_a_a >= number_of_precomputed_powers || delta_b_b >= number_of_precomputed_powers 
           || delta_b_a >= number_of_precomputed_powers || delta_a_b >= number_of_precomputed_powers){
-      Rcpp::stop("range outside of pre-computations");
+      range_error(x_a, x_b, y_a, y_b, i_profile);
     } 
     
     // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
@@ -200,7 +213,7 @@ double compute_profile_pr_ns(int i, int i_cluster, std::vector<NumericMatrix> &p
       if (x > 0){
         // standard haplotype
         int delta = std::abs(x - y(i_cluster, i_locus));
-        if (delta >= number_of_precomputed_powers) Rcpp::stop("range outside of pre-computations");
+        if (delta >= number_of_precomputed_powers) range_error(x, y(i_cluster, i_locus), i);
         
         pr_cluster *= (1.0 - pi(i_cluster, i_locus)) *
           prs_by_cluster[i_cluster](delta, i_locus);
@@ -242,8 +255,8 @@ double compute_profile_pr_ns(int i, int i_cluster, std::vector<NumericMatrix> &p
         int delta_a_b = std::abs(x_a - y_b);
         
         if (delta_a_a >= number_of_precomputed_powers || delta_b_b >= number_of_precomputed_powers 
-              || delta_b_a >= number_of_precomputed_powers || delta_a_b >= number_of_precomputed_powers){
-          Rcpp::stop("range outside of pre-computations");
+              || delta_b_a >= number_of_precomputed_powers || delta_a_b >= number_of_precomputed_powers){	        
+			range_error(x_a, x_b, y_a, y_b, i);
         } 
         
         // Rcpp::Rcout << "i: " << i << " i_locus: " << i_locus << "\n";
