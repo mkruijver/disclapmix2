@@ -1,3 +1,24 @@
+#' @title Compute Profile Probability from fit
+#'
+#' @param x DataFrame. Columns should be one character vector for each locus
+#' @param fit	Output from disclapmix2
+#' @description Compute the profile probability for a new profile that was not used in the original fit.
+#' @returns Numeric.
+#' @examples
+#' require(disclapmix)
+#'
+#' data(danes) 
+#'
+#' x <- as.data.frame(sapply(danes[rep(seq_len(nrow(danes)), danes$n), -ncol(danes)], as.character))
+#'
+#' dlm2_fit <- disclapmix2(x, number_of_clusters = 3)
+#' 
+#' 
+#' new_profile <- structure(list(DYS19 = "14", DYS389I = "13", DYS389II = "29", 
+#'                               DYS390 = "22", DYS391 = "9", DYS392 = "15", DYS393 = "13", 
+#'                               DYS437 = "14", DYS438 = "11", DYS439 = "12"), row.names = 1L, class = #' "data.frame")
+#' 
+#' profile_pr_by_locus_and_cluster(x = new_profile, dlm2_fit)
 #' @export
 profile_pr_by_locus_and_cluster <- function(x, fit){
   
