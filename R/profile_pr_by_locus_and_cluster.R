@@ -25,7 +25,7 @@ profile_pr_by_locus_and_cluster <- function(x, fit){
   x_ordered <- x[fit_loci]
   
   # determine which haplotypes are 1, 2 or non-standard
-  x_summary <- disclapmix2::summarise_db(x_ordered)
+  x_summary <- summarise_db(x_ordered)
   
   # get array indices of non-standard haplotypes
   one_two <- matrix(c(rep("1", length(fit$one_loci)), 
@@ -38,14 +38,14 @@ profile_pr_by_locus_and_cluster <- function(x, fit){
   x_ordered_character_filtered[ns_idx] <- NA
   
   # convert to integer matrix
-  x_int <- disclapmix2::to_int_db(x_ordered_character_filtered, 
+  x_int <- to_int_db(x_ordered_character_filtered, 
                                    fit$one_loci, fit$two_loci)
   
   
   number_of_1_loci <- length(fit$one_loci)
   number_of_2_loci <- length(fit$two_loci)
   
-  pr <- disclapmix2::compute_profiles_pr_by_cluster_and_locus(fit$p, x_int, fit$y, number_of_1_loci, number_of_2_loci)
+  pr <- compute_profiles_pr_by_cluster_and_locus(fit$p, x_int, fit$y, number_of_1_loci, number_of_2_loci)
   
   ## now deal with the non-standard haplotypes
   ## which so far have pr. 1
