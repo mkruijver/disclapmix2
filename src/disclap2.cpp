@@ -443,8 +443,6 @@ NumericMatrix compute_profile_prs(NumericMatrix p_by_cluster_and_locus, IntegerM
   // pre-compute part of the discrete Laplace pmf for each cluster and locus
   std::vector<NumericMatrix> prs_by_cluster = precompute_dlm_powers(p_by_cluster_and_locus);
   
-  double loglik = 0.0;
-  
   // for each profile
   for(int i = 0; i < n; i++){
     
@@ -547,8 +545,6 @@ NumericMatrix compute_profile_prs_ns(NumericMatrix p_by_cluster_and_locus, Integ
   
   // pre-compute part of the discrete Laplace pmf for each cluster and locus
   std::vector<NumericMatrix> prs_by_cluster = precompute_dlm_powers(p_by_cluster_and_locus);
-  
-  double loglik = 0.0;
   
   // for each profile
   for(int i = 0; i < n; i++){
