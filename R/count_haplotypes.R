@@ -11,16 +11,6 @@ haplotype_counts <- function(x){
   as.integer(table(profiles_char)[profiles_char])
 }
 
-x_raw <- list()
-for(i in 1:3){
-  x_raw_i <- readxl::read_excel(system.file("extdata", "South_Australia.xlsx", package="disclapmix2"), col_types = "text", sheet = i)
-  x_raw[[i]] <- x_raw_i 
-}
-
-x_raw_bound <- do.call(rbind, x_raw)
-x <- x_raw_bound[-c(1,2)] # remove 'Sample Name' and 'Population' columns
-
-
 #' List unique haplotypes with their counts
 #'
 #' @param x DataFrame (by locus) of character vectors containing haplotypes (rows) where alleles are separated by comma's, e.g. "13,14.2" is a haplotype
