@@ -1,4 +1,3 @@
-#' @export
 summarise_db <- function(x){
   loci <- names(x)
   tab_12other <- matrix(data=numeric(), nrow=5, ncol=length(loci))

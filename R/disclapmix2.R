@@ -51,7 +51,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   }
   
   if (verbose>=1) disclapmix2::verbose_print("Determining loci with suitable data")
-  x_summarised <- summarise_db(x)
+  x_summarised <- disclapmix2::summarise_db(x)
   
   # clean the data such that 1-loci only have 1 integer or NA
   # and 2-loci only have 2 integers or NA
