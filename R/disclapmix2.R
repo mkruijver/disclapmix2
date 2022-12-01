@@ -1,4 +1,4 @@
-#' @title Discrete Laplace mixture inference using Numerical Optimisaiton
+#' @title Discrete Laplace mixture inference using Numerical Optimisation
 #'
 #' @param x DataFrame. Columns should be one character vector for each locus
 #' @param number_of_clusters	The number of clusters to fit the model for.
@@ -21,7 +21,7 @@
 #' dlm_fit <- disclapmix(x, clusters = 3L)
 #' dlm2_fit <- disclapmix2(x2, number_of_clusters = 3)
 #'
-#' stopifnot(all.equal(c(dlm_fit$logL_marginal, dlm2_fit$log_lik)))
+#' stopifnot(all.equal(dlm_fit$logL_marginal, dlm2_fit$log_lik))
 #' @export
 disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_non_standard_haplotypes = TRUE, 
                         use_stripped_data_for_initial_clustering = FALSE, initial_y_method = "pam",
