@@ -14,7 +14,7 @@ summarise_db <- function(x){
     x_locus <- x[[locus]]
     
     # split by comma
-    x_locus_unpacked <- disclapmix2:::unpack_haplotypes(x_locus)
+    x_locus_unpacked <- disclapmix2::unpack_haplotypes(x_locus)
 
     # grab only integer alleles
     x_locus_not_NA <- which(!is.na(x_locus))

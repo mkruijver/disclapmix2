@@ -50,7 +50,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
     stop("initial_y_method needs to be \"pam\" or \"clara\"")
   }
   
-  if (verbose>=1) disclapmix2:::verbose_print("Determining loci with suitable data")
+  if (verbose>=1) disclapmix2::verbose_print("Determining loci with suitable data")
   x_summarised <- summarise_db(x)
   
   # clean the data such that 1-loci only have 1 integer or NA
@@ -64,14 +64,14 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   number_of_loci <- length(loci)
   
   locuslabel <- function(i) if (i==1) "locus" else "loci"
-  if (verbose>=1) disclapmix2:::verbose_print("Found", number_of_1_loci, paste0("suitable 1-", locuslabel(number_of_1_loci)),
+  if (verbose>=1) disclapmix2::verbose_print("Found", number_of_1_loci, paste0("suitable 1-", locuslabel(number_of_1_loci)),
                                               "and", number_of_2_loci,paste0("suitable 2-", locuslabel(number_of_2_loci)),
                                               "among", ncol(x), "columns")
   
   x_cleaned <- matrix(data = character(), nrow = nrow(x), ncol = number_of_loci)
   colnames(x_cleaned) <- c(one_loci, if(number_of_2_loci>0) two_loci else NULL)
   
-  if (verbose>=1) disclapmix2:::verbose_print("Setting any haplotype that is not 1 or 2 integers at the approriate locus to NA")
+  if (verbose>=1) disclapmix2::verbose_print("Setting any haplotype that is not 1 or 2 integers at the approriate locus to NA")
   removed_non_standard_dfs <- list()
   
   # locus = "DYS458"
@@ -116,11 +116,11 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   
   if (verbose>=1){
     if (nrow(removed_non_standard_df>1)){
-      disclapmix2:::verbose_print("Set", nrow(removed_non_standard_df), "non-standard haplotypes to NA:")
+      disclapmix2::verbose_print("Set", nrow(removed_non_standard_df), "non-standard haplotypes to NA:")
       print(removed_non_standard_df)
     }
     else{
-      disclapmix2:::verbose_print("All haplotypes are integer valued")
+      disclapmix2::verbose_print("All haplotypes are integer valued")
     }
   }
   
@@ -129,20 +129,20 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   x_stripped_int <- to_int_db(x_stripped, one_loci, two_loci)
   
   if (remove_non_standard_haplotypes){
-    if (verbose>=1) disclapmix2:::verbose_print("Removing profiles with any haplotype that is not 1 or 2 integers at the approriate locus")
+    if (verbose>=1) disclapmix2::verbose_print("Removing profiles with any haplotype that is not 1 or 2 integers at the approriate locus")
 
     x_int <- x_stripped_int
   }else{
-    if (verbose>=1) disclapmix2:::verbose_print("Not removing profiles with any haplotype that is not 1 or 2 integers at the approriate locus")
+    if (verbose>=1) disclapmix2::verbose_print("Not removing profiles with any haplotype that is not 1 or 2 integers at the approriate locus")
     x_int <- to_int_db(x_cleaned, one_loci, two_loci)
     
     observations_columns <- c(one_loci, if(number_of_2_loci > 0) paste0(two_loci,"(1)") else character())
     
-    if (verbose>=1) disclapmix2:::verbose_print(sum(is.na(x_int[,observations_columns])), "NA observations in x_int")
+    if (verbose>=1) disclapmix2::verbose_print(sum(is.na(x_int[,observations_columns])), "NA observations in x_int")
   }
   
-  if (verbose>=1) disclapmix2:::verbose_print(nrow(x_int) , paste0("profiles used in analysis (started with ", nrow(x),")"))
-  if (verbose>=1) disclapmix2:::verbose_print("Determining initial clustering using", initial_y_method)
+  if (verbose>=1) disclapmix2::verbose_print(nrow(x_int) , paste0("profiles used in analysis (started with ", nrow(x),")"))
+  if (verbose>=1) disclapmix2::verbose_print("Determining initial clustering using", initial_y_method)
   
   if (!use_stripped_data_for_initial_clustering){
     
@@ -155,9 +155,9 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
     
     if (anyNA(initial_clustering$medoids)){
       use_stripped_data_for_initial_clustering <- TRUE
-      if (verbose>=1) disclapmix2:::verbose_print("NAs in initial clustering, retrying with stripped data")    }
+      if (verbose>=1) disclapmix2::verbose_print("NAs in initial clustering, retrying with stripped data")    }
   }else{
-    if (verbose>=1) disclapmix2:::verbose_print("Using stripped data for initial clustering")
+    if (verbose>=1) disclapmix2::verbose_print("Using stripped data for initial clustering")
   }
   
   if (use_stripped_data_for_initial_clustering){
@@ -182,7 +182,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-1,number_of_clusters), rep(0,number_of_loci-1)) else rep(-1,number_of_loci)
   theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-0.5,number_of_clusters), rep(-0.5,number_of_loci-1)) else rep(-1,number_of_loci)
   
-  if (verbose>=1) disclapmix2:::verbose_print("Starting optimisation")
+  if (verbose>=1) disclapmix2::verbose_print("Starting optimisation")
   
   cluster_labels <- paste0("cluster", seq_len(number_of_clusters))
   
@@ -207,43 +207,43 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
     theta_opt <- opt$par
     theta_iterations[[1+length(theta_iterations)]] <- theta_opt
     
-    tau_opt <- disclapmix2:::get_tau(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
-    p_opt <- disclapmix2:::get_P(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
+    tau_opt <- disclapmix2::get_tau(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
+    p_opt <- disclapmix2::get_P(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
     
     rownames(p_opt) <- cluster_labels
     colnames(p_opt) <- loci
     
-    x_profile_pr_by_cluster <- disclapmix2:::compute_profile_prs(p_by_cluster_and_locus = p_opt, db = x_int, y = y, number_of_1_loci, number_of_2_loci)
-    v_matrix <- disclapmix2:::compute_posterior_cluster_prs(profile_pr = x_profile_pr_by_cluster, tau = tau_opt)
+    x_profile_pr_by_cluster <- disclapmix2::compute_profile_prs(p_by_cluster_and_locus = p_opt, db = x_int, y = y, number_of_1_loci, number_of_2_loci)
+    v_matrix <- disclapmix2::compute_posterior_cluster_prs(profile_pr = x_profile_pr_by_cluster, tau = tau_opt)
     
     # see if we need to move centers
-    y_new <- disclapmix2:::move_centers(x_int, y, v_matrix)
+    y_new <- disclapmix2::move_centers(x_int, y, v_matrix)
     
     theta <- theta_opt
     
     dist_new_y <- sum(abs(y - y_new))
     if (dist_new_y == 0) {
       if (verbose >= 1L) {
-        disclapmix2:::verbose_print("Current central haplotypes are optimal")
+        disclapmix2::verbose_print("Current central haplotypes are optimal")
       }
       break
     } else if (any(duplicated(y_new))) { # new case introduced in disclapmix version 1.6.3
       if (verbose >= 1L) {
-        disclapmix2:::verbose_print("New central haplotypes had at least one duplicated haplotype, change rejected")
+        disclapmix2::verbose_print("New central haplotypes had at least one duplicated haplotype, change rejected")
       }
       break
     } else {
       if (verbose >= 2L) {      
-        disclapmix2:::verbose_print("Current central haplotypes are not otimal")
+        disclapmix2::verbose_print("Current central haplotypes are not otimal")
         print(y)
-        disclapmix2:::verbose_print("New central haplotypes:")
+        disclapmix2::verbose_print("New central haplotypes:")
         print(y_new)
-        disclapmix2:::verbose_print("Differences:")
+        disclapmix2::verbose_print("Differences:")
         print(y_new - y)
-        disclapmix2:::verbose_print("Number of stepwise mutations between center configurations = ", dist_new_y)
+        disclapmix2::verbose_print("Number of stepwise mutations between center configurations = ", dist_new_y)
         
       } else if (verbose >= 1) {
-        disclapmix2:::verbose_print("Current central haplotypes are not optimal, moving and restarting optimisation")
+        disclapmix2::verbose_print("Current central haplotypes are not optimal, moving and restarting optimisation")
       }
       
       y <- y_new
@@ -253,7 +253,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   if((!remove_non_standard_haplotypes) & (nrow(removed_non_standard_df)>0)){
     
     repeat{
-      disclapmix2:::verbose_print(nrow(removed_non_standard_df), "observations of",
+      disclapmix2::verbose_print(nrow(removed_non_standard_df), "observations of",
                                   nrow(non_standard_df),
                                   "non-standard haplotypes were ignored, second stage estimation begins")
       
@@ -265,7 +265,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
         x_int_ns[removed_non_standard_df$row[i], column] <- removed_non_standard_df$index[i]
       }
       if (verbose>=2){
-        disclapmix2:::verbose_print("Relabeled data has", sum(x_int_ns<0, na.rm = TRUE), "negative indices")
+        disclapmix2::verbose_print("Relabeled data has", sum(x_int_ns<0, na.rm = TRUE), "negative indices")
       }
       ns_locus_haplotype <- paste0(non_standard_df$locus,"_", non_standard_df$haplotype)
       dimnames_q <- list(ns_locus_haplotype, cluster_labels)
@@ -294,14 +294,14 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
         theta <- opt_ns$par
         
         # make v-matrix again
-        tau_opt <- disclapmix2:::get_tau(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
-        p_opt <- disclapmix2:::get_P(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
+        tau_opt <- disclapmix2::get_tau(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
+        p_opt <- disclapmix2::get_P(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
         rownames(p_opt) <- cluster_labels
         colnames(p_opt) <- loci
         
         # recreate the v matrix
-        x_profile_pr_by_cluster <- disclapmix2:::compute_profile_prs_ns(p_by_cluster_and_locus = p_opt, db = x_int, y = y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
-        v_matrix <- disclapmix2:::compute_posterior_cluster_prs(profile_pr = x_profile_pr_by_cluster, tau = tau_opt)
+        x_profile_pr_by_cluster <- disclapmix2::compute_profile_prs_ns(p_by_cluster_and_locus = p_opt, db = x_int, y = y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
+        v_matrix <- disclapmix2::compute_posterior_cluster_prs(profile_pr = x_profile_pr_by_cluster, tau = tau_opt)
         
         # estimate pi
         pi_opt_next <- estimate_pr_ns(x = x_int_ns, v = v_matrix, number_of_1_loci = number_of_1_loci, number_of_2_loci = number_of_2_loci, locus_names = loci)
@@ -314,8 +314,8 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
         abs_diff_q <- sum(abs(q_opt_next - q_opt))
         
         if (verbose >=2){
-          disclapmix2:::verbose_print("Abs difference in pi:", abs_diff_pi)
-          disclapmix2:::verbose_print("Abs difference in q:", abs_diff_q)
+          disclapmix2::verbose_print("Abs difference in pi:", abs_diff_pi)
+          disclapmix2::verbose_print("Abs difference in q:", abs_diff_q)
         }
         
         conv <- abs_diff_pi<1e-12 & abs_diff_q <1e-12
@@ -324,18 +324,18 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
       }
       
       # check if the centers are optimal
-      y_new <- disclapmix2:::move_centers(x_int, y, v_matrix) # note that we need NAs for non-standard haplotypes here
+      y_new <- disclapmix2::move_centers(x_int, y, v_matrix) # note that we need NAs for non-standard haplotypes here
       
       dist_new_y <- sum(abs(y - y_new))
       
       if (dist_new_y > 0){
-        disclapmix2:::verbose_print("Centers need to be moved after second stage")
-        disclapmix2:::verbose_print("Number of stepwise mutations between center configurations = ", dist_new_y)
+        disclapmix2::verbose_print("Centers need to be moved after second stage")
+        disclapmix2::verbose_print("Number of stepwise mutations between center configurations = ", dist_new_y)
         
         y <- y_new
       } 
       else{
-        disclapmix2:::verbose_print("Second stage finished: centers need not be moved")
+        disclapmix2::verbose_print("Second stage finished: centers need not be moved")
         break
       }
     }
@@ -345,7 +345,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   
   if (verbose >= 1) {
     iterations_label <- function(i) if (i==1) "iteration" else "iterations"
-    disclapmix2:::verbose_print("Finished after", number_of_iterations, iterations_label(number_of_iterations))
+    disclapmix2::verbose_print("Finished after", number_of_iterations, iterations_label(number_of_iterations))
   }
   
   x_profile_pr = rowSums(rep(tau_opt, each= nrow(x_int)) * x_profile_pr_by_cluster)
