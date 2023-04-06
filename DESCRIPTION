@@ -10,7 +10,6 @@ License: GPL (>= 2)
 Imports: Rcpp (>= 1.0.3), cluster
 LinkingTo: Rcpp
 RoxygenNote: 7.2.1
-SystemRequirements: C++11
 Encoding: UTF-8
 Suggests: 
     testthat, disclapmix, readxl
