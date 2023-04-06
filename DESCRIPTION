@@ -1,7 +1,7 @@
 Package: disclapmix2
 Type: Package
 Title: Mixtures of Discrete Laplace Distributions using Numerical Optimisation
-Version: 0.5
+Version: 0.6
 Date: 2023-06-04
 Author: Maarten Kruijver
 Maintainer: Maarten Kruijver <maarten.kruijver@esr.cri.nz>
