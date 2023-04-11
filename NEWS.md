@@ -1,3 +1,7 @@
+# disclapmix2 0.6.1
+* Update Authors field
+* Resubmit to CRAN
+
 # disclapmix2 0.6
 * Remove redundant C++11 SystemRequirement
 * Resubmit to CRAN
