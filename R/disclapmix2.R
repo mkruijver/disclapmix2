@@ -178,7 +178,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
     y_iterations[[1 + length(y_iterations)]] <- y
     
     f <- function(theta) {
-      negll <- disclapmix2::neg_loglik_theta(theta, x_int, y, number_of_1_loci, number_of_2_loci)
+      negll <- neg_loglik_theta(theta, x_int, y, number_of_1_loci, number_of_2_loci)
       
       negll
     }
@@ -262,7 +262,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
         
         # optimise the variances again including the non-standard haplotypes
         f_ns <- function(theta) {
-          negll <- disclapmix2::neg_loglik_theta_ns(theta, x_int_ns, y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
+          negll <- neg_loglik_theta_ns(theta, x_int_ns, y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
           
           # if (is.nan(negll) || is.infinite(negll)){
           #   theta_fail <<- theta
