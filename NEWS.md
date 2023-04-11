@@ -1,5 +1,6 @@
 # disclapmix2 0.6.1
 * Update Authors field
+* Quote 'disclapmix' in Description field
 * Resubmit to CRAN
 
 # disclapmix2 0.6
