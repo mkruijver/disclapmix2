@@ -164,7 +164,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-1,number_of_clusters), rep(0,number_of_loci-1)) else rep(-1,number_of_loci)
   theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-0.5,number_of_clusters), rep(-0.5,number_of_loci-1)) else rep(-1,number_of_loci)
   
-  if (verbose>=1) verbose_print("Starting optimisation")
+  if (verbose>=1) verbose_print(paste0("Starting optimisation for K = ", number_of_clusters))
   
   cluster_labels <- paste0("cluster", seq_len(number_of_clusters))
   
@@ -235,9 +235,11 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   if((!remove_non_standard_haplotypes) & (nrow(removed_non_standard_df)>0)){
     
     repeat{
-      verbose_print(nrow(removed_non_standard_df), "observations of",
-                                  nrow(non_standard_df),
-                                  "non-standard haplotypes were ignored, second stage estimation begins")
+      if (verbose >= 1){
+        verbose_print(nrow(removed_non_standard_df), "observations of",
+                                    nrow(non_standard_df),
+                                    "non-standard haplotypes were ignored, second stage estimation begins")
+      }
       
       # relabel the matrix such that non-standard alleles get negative indices
       x_int_ns <- x_int
