@@ -1,3 +1,7 @@
+# disclapmix2 0.6.2
+* Fixes an issue where unwanted verbose text was printed in 'disclapmix2'
+* Includes Rcpp exports in git repository to work around issues with 'devtools::install_github'
+
 # disclapmix2 0.6.1
 * Update Authors field
 * Quote 'disclapmix' in Description field
