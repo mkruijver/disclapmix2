@@ -56,7 +56,6 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   if (verbose>=1) verbose_print("Setting any haplotype that is not 1 or 2 integers at the approriate locus to NA")
   removed_non_standard_dfs <- list()
   
-  # locus = "DYS458"
   for(locus in one_loci){
     ind_1 <- which(x_summarised$x_ind_12_other[,locus]=="1")
     not_ind_1 <- which(sapply(x_summarised$x_ind_12_other[,locus]!="1", isTRUE))
@@ -313,13 +312,19 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
       dist_new_y <- sum(abs(y - y_new))
       
       if (dist_new_y > 0){
-        verbose_print("Centers need to be moved after second stage")
-        verbose_print("Number of stepwise mutations between center configurations = ", dist_new_y)
+        
+        if (verbose >= 1){
+          verbose_print("Centers need to be moved after second stage")
+          verbose_print("Number of stepwise mutations between center configurations = ", dist_new_y)
+        }
         
         y <- y_new
       } 
       else{
-        verbose_print("Second stage finished: centers need not be moved")
+        
+        if (verbose >= 1){
+          verbose_print("Second stage finished: centers need not be moved")
+        }
         break
       }
     }
