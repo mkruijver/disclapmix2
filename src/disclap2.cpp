@@ -19,6 +19,10 @@ inline double inv_logit(double x) {
   }
 }
 
+inline double logit(double x) { 
+  return std::log(x) - std::log1p(-x); 
+}
+
 inline void constrain_sum_to_zero(const NumericVector& free, NumericVector& full){
   // full is one longer than free
   int n = full.size();
@@ -146,6 +150,33 @@ NumericMatrix get_P(const NumericVector& theta,
   }else{
     Rcpp::stop("Unknown link function");
   }
+}
+
+// [[Rcpp::export]]
+NumericVector get_theta_from_tau(NumericVector tau) {
+  int c = tau.size();
+  if (c < 2) stop("tau must have length >= 2");
+  
+  NumericVector theta(c - 1);
+  double remaining = 1.0;
+  
+  // small epsilon to avoid logit(0) / logit(1)
+  const double eps = 1e-12;
+  
+  for (int i = 0; i < c - 1; i++) {
+    if (remaining <= 0.0) stop("Invalid tau: remaining mass non-positive before last element");
+    
+    double v = tau[i] / remaining; // should be in [0,1]
+    
+    // clamp for numerical stability
+    if (v < eps) v = eps;
+    if (v > 1.0 - eps) v = 1.0 - eps;
+    
+    theta[i] = logit(v);
+    remaining -= tau[i];
+  }
+  
+  return theta;
 }
 
 // [[Rcpp::export]]
@@ -372,6 +403,24 @@ double compute_profile_pr_ns(int i, int i_cluster, std::vector<NumericMatrix> &p
     
     return pr_cluster;
   } 
+
+
+void check_tau(const NumericVector &tau){
+  const double eps = 1e-10;
+  
+  double tau_sum = 0.0;
+  
+  for(int i = 0; i < tau.size(); i++){
+    tau_sum += tau[i];
+    if (tau[i] < 0) {
+      Rcpp::stop("negative tau");
+    }
+  }
+  
+  if (tau_sum > 1.0 + eps){
+    Rcpp::stop("sum(tau) exceeds 1: " + std::to_string(tau_sum));
+  }
+}
   
 // [[Rcpp::export]]
 double loglik_tau_p(NumericVector tau, NumericMatrix p_by_cluster_and_locus, IntegerMatrix db, IntegerMatrix y,
@@ -399,15 +448,7 @@ double loglik_tau_p(NumericVector tau, NumericMatrix p_by_cluster_and_locus, Int
   }
   
   // make sure tau is valid
-  double tau_sum = 0.0;
-  double tau_penalty = 0.0;
-  for(int i = 0; i < tau.size(); i++){
-    tau_sum += tau[i];
-    if (tau[i] < 0) return R_NegInf;
-  }
-  if (tau_sum > 1){
-    tau_penalty -= (tau_sum-1) * 1e7;  
-  }
+  check_tau(tau);
   
   // pre-compute part of the discrete Laplace pmf for each cluster and locus
   std::vector<NumericMatrix> prs_by_cluster = precompute_dlm_powers(p_by_cluster_and_locus);
@@ -430,7 +471,7 @@ double loglik_tau_p(NumericVector tau, NumericMatrix p_by_cluster_and_locus, Int
     loglik += std::log(pr);
   }
   
-  return loglik + tau_penalty;
+  return loglik;
 }
 
 // [[Rcpp::export]]
@@ -467,9 +508,7 @@ double loglik_tau_p_ns(NumericVector tau, NumericMatrix p_by_cluster_and_locus,
   }
   
   // make sure tau is valid
-  for(int i = 0; i < tau.size(); i++){
-    if (tau[i] < 0 || tau[i] >1) return R_NegInf;
-  }
+  check_tau(tau);
   
   // pre-compute part of the discrete Laplace pmf for each cluster and locus
   std::vector<NumericMatrix> prs_by_cluster = precompute_dlm_powers(p_by_cluster_and_locus);

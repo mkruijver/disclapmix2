@@ -9,6 +9,10 @@ get_P <- function(theta, number_of_loci, number_of_clusters, link) {
     .Call('_disclapmix2_get_P', PACKAGE = 'disclapmix2', theta, number_of_loci, number_of_clusters, link)
 }
 
+get_theta_from_tau <- function(tau) {
+    .Call('_disclapmix2_get_theta_from_tau', PACKAGE = 'disclapmix2', tau)
+}
+
 get_tau <- function(theta, number_of_loci, number_of_clusters) {
     .Call('_disclapmix2_get_tau', PACKAGE = 'disclapmix2', theta, number_of_loci, number_of_clusters)
 }

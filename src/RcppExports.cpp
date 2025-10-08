@@ -38,6 +38,17 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// get_theta_from_tau
+NumericVector get_theta_from_tau(NumericVector tau);
+RcppExport SEXP _disclapmix2_get_theta_from_tau(SEXP tauSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type tau(tauSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_theta_from_tau(tau));
+    return rcpp_result_gen;
+END_RCPP
+}
 // get_tau
 NumericVector get_tau(NumericVector theta, int number_of_loci, int number_of_clusters);
 RcppExport SEXP _disclapmix2_get_tau(SEXP thetaSEXP, SEXP number_of_lociSEXP, SEXP number_of_clustersSEXP) {
@@ -223,6 +234,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_disclapmix2_get_P_logistic", (DL_FUNC) &_disclapmix2_get_P_logistic, 4},
     {"_disclapmix2_get_P", (DL_FUNC) &_disclapmix2_get_P, 4},
+    {"_disclapmix2_get_theta_from_tau", (DL_FUNC) &_disclapmix2_get_theta_from_tau, 1},
     {"_disclapmix2_get_tau", (DL_FUNC) &_disclapmix2_get_tau, 3},
     {"_disclapmix2_precompute_dlm_powers", (DL_FUNC) &_disclapmix2_precompute_dlm_powers, 1},
     {"_disclapmix2_loglik_tau_p", (DL_FUNC) &_disclapmix2_loglik_tau_p, 6},

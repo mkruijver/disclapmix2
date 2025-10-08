@@ -102,7 +102,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
   initial_pam_tau <- (tabulate(initial_clustering$clustering, 
                                nbins = number_of_clusters) / nrow(x_int))
   initial_pam_theta_tau <- if(number_of_clusters == 1L) numeric() else 
-    log( initial_pam_tau[1 : (number_of_clusters - 1)])
+    get_theta_from_tau(initial_pam_tau)
   
   # now find the variances
   y <- y0 <- initial_clustering$medoids
