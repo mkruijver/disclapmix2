@@ -43,9 +43,10 @@ summarise_db <- function(x){
   tab_12other[5,] <- sapply(x, function(x0) sum(!is.na(x0)))
   
   # determine suitable 1-loci and 2-loci
-  one_loci <- loci[sapply(tab_12other["fraction 1 integer allele", ]/(1-tab_12other["fraction NA",]) > 0.8, isTRUE)]
-  two_loci <- loci[sapply(tab_12other["fraction 2 integer alleles", ]/(1-tab_12other["fraction NA",]) > 0.8, isTRUE)]
-  
+  one_loci <- loci[sapply(tab_12other["fraction 1 integer allele", ]/
+                            (1 - tab_12other["fraction NA",]) >= 0.5, isTRUE)]
+  two_loci <- loci[sapply(tab_12other["fraction 2 integer alleles", ]/
+                            (1 - tab_12other["fraction NA",]) >= 0.5, isTRUE)]
   
   list(x_ind_12_other = x_is_12other, one_loci = one_loci, two_loci = two_loci, tab = tab_12other)
 }
