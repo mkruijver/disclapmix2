@@ -50,50 +50,12 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
                                               "and", number_of_2_loci,paste0("suitable 2-", locuslabel(number_of_2_loci)),
                                               "among", ncol(x), "columns")
   
-  x_cleaned <- matrix(data = character(), nrow = nrow(x), ncol = number_of_loci)
-  colnames(x_cleaned) <- c(one_loci, if(number_of_2_loci>0) two_loci else NULL)
+  x_clean_result <- clean_and_reorder(x, x_summarised, include_2_loci, verbose)
   
-  if (verbose>=1) verbose_print("Setting any haplotype that is not 1 or 2 integers at the approriate locus to NA")
-  removed_non_standard_dfs <- list()
-  
-  for(locus in one_loci){
-    ind_1 <- which(x_summarised$x_ind_12_other[,locus]=="1")
-    not_ind_1 <- which(sapply(x_summarised$x_ind_12_other[,locus]!="1", isTRUE))
-    
-    x_cleaned[ind_1,locus] <- x[[locus]][ind_1]
-    
-    number_removed <- length(not_ind_1)
-    removed_non_standard_dfs[[1+length(removed_non_standard_dfs)]] <- data.frame(row = not_ind_1, locus=rep(locus, number_removed), haplotype=x[[locus]][not_ind_1])
-  }
-  
-  if(number_of_2_loci > 0){
-    for(locus in two_loci){
-      ind_2 <- which(x_summarised$x_ind_12_other[,locus]=="2")
-      not_ind_2 <- which(sapply(x_summarised$x_ind_12_other[,locus]!="2", isTRUE))
-
-      x_cleaned[ind_2,locus] <- x[[locus]][ind_2]
-      
-      number_removed <- length(not_ind_2)
-      
-      removed_non_standard_dfs[[1+length(removed_non_standard_dfs)]] <- data.frame(row = not_ind_2, locus=rep(locus, number_removed), haplotype=x[[locus]][not_ind_2])
-    }
-  }
-  
-  # list out each removed non-standard haplotype
-  removed_non_standard_df <- do.call(rbind, removed_non_standard_dfs)
-  
-  # list out the non-standard haplotypes
-  non_standard_df <- unique(removed_non_standard_df[,c("locus","haplotype")])
-  non_standard_df$locus <- factor(non_standard_df$locus, levels=loci)
-  rownames(non_standard_df) <- NULL
-  
-  # assign index
-  non_standard_df$index <- -seq_len(nrow(non_standard_df))
-  if (nrow(non_standard_df) > 0){
-    removed_non_standard_df$index <- non_standard_df$index[match(
-      paste0(removed_non_standard_df$locus, "___", removed_non_standard_df$haplotype),
-      paste0(non_standard_df$locus, "___", non_standard_df$haplotype))]
-  }
+  # unpack result
+  x_cleaned <- x_clean_result$x_cleaned
+  removed_non_standard_df <- x_clean_result$removed_non_standard_df
+  non_standard_df <- x_clean_result$non_standard_df
   
   if (verbose>=1){
     if (nrow(removed_non_standard_df>1)){
@@ -123,45 +85,23 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
   }
   
   if (verbose>=1) verbose_print(nrow(x_int) , paste0("profiles used in analysis (started with ", nrow(x),")"))
-  if (verbose>=1) verbose_print("Determining initial clustering using", initial_y_method)
   
-  if (!use_stripped_data_for_initial_clustering){
+  initial_clustering <- get_initial_clustering(x_int, x_stripped_int,
+    number_of_clusters, initial_y_method,
+    use_stripped_data_for_initial_clustering, verbose) 
     
-    if (initial_y_method=="pam"){
-      initial_clustering <- cluster::pam(x_int, k = number_of_clusters, metric = "manhattan",diss = FALSE, keep.diss=FALSE, keep.data=TRUE)
-    }
-    else{
-      initial_clustering <- cluster::clara(x_int, k = number_of_clusters, metric = "manhattan",pamLike = TRUE,samples=100, correct.d = TRUE)
-    }
-    
-    if (anyNA(initial_clustering$medoids)){
-      use_stripped_data_for_initial_clustering <- TRUE
-      if (verbose>=1) verbose_print("NAs in initial clustering, retrying with stripped data")    }
-  }else{
-    if (verbose>=1) verbose_print("Using stripped data for initial clustering")
-  }
-  
-  if (use_stripped_data_for_initial_clustering){
-    
-    if (initial_y_method == "pam"){
-      initial_clustering <- cluster::pam(x_stripped_int, k = number_of_clusters, 
-                                         metric = "manhattan",diss = FALSE, keep.diss=FALSE, keep.data=TRUE)
-    }
-    else{
-      initial_clustering <- cluster::clara(x_stripped_int, k = number_of_clusters,
-                                           metric = "manhattan", pamLike = TRUE, samples=100, correct.d = TRUE)
-      
-    }
-    
-  }
-  
-  initial_pam_tau <- (tabulate(initial_clustering$clustering, nbins = number_of_clusters)/nrow(x_int))
-  initial_pam_theta_tau <- if(number_of_clusters==1L) numeric() else log( initial_pam_tau[1:(number_of_clusters-1)])
+  initial_pam_tau <- (tabulate(initial_clustering$clustering, 
+                               nbins = number_of_clusters) / nrow(x_int))
+  initial_pam_theta_tau <- if(number_of_clusters == 1L) numeric() else 
+    log( initial_pam_tau[1 : (number_of_clusters - 1)])
   
   # now find the variances
   y <- y0 <- initial_clustering$medoids
-  theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-1,number_of_clusters), rep(0,number_of_loci-1)) else rep(-1,number_of_loci)
-  theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-0.5,number_of_clusters), rep(-0.5,number_of_loci-1)) else rep(-1,number_of_loci)
+  #theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, rep(-1,number_of_clusters), rep(0,number_of_loci-1)) else rep(-1,number_of_loci)
+  theta <- theta0 <- if(number_of_clusters>1) c(initial_pam_theta_tau, 
+                                                rep(-0.5, number_of_clusters), 
+                                                rep(-0.5, number_of_loci-1)) else 
+                                                  rep(-1, number_of_loci)
   
   if (verbose>=1) verbose_print(paste0("Starting optimisation for K = ", number_of_clusters))
   
@@ -265,10 +205,10 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
         f_ns <- function(theta) {
           negll <- neg_loglik_theta_ns(theta, x_int_ns, y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
           
-          # if (is.nan(negll) || is.infinite(negll)){
-          #   theta_fail <<- theta
-          #   browser()
-          # }
+          if (is.nan(negll) || is.infinite(negll)){
+            theta_fail <<- theta
+            browser()
+          }
           negll
         }
         
@@ -389,16 +329,69 @@ to_int_db <- function(x, one_loci, two_loci){
   colnames(x_int_one_loci) <- one_loci
   
   x_int_two_loci <- matrix(integer(), nrow=nrow(x), ncol=2 * length(two_loci))
-  if(length(two_loci) > 0) colnames(x_int_two_loci) <- paste0(rep(two_loci, each=2),c("(1)","(2)"))
+  if(length(two_loci) > 0) colnames(x_int_two_loci) <- 
+    paste0(rep(two_loci, each = 2), c("(1)","(2)"))
   
   for( locus in two_loci){
     x_locus <- x[,locus]
-    locus_split <- ifelse(is.na(x_locus), yes = list(c(NA_character_,NA_character_)), no =strsplit(x_locus, split = ","))
+    locus_split <- ifelse(is.na(x_locus), 
+                          yes = list(c(NA_character_,NA_character_)), 
+                          no = strsplit(x_locus, split = ","))
     
-    x_int_two_loci[,paste0(locus,c("(1)","(2)"))] <- matrix(as.integer(unlist(locus_split)), nrow = nrow(x), ncol=2,byrow = TRUE)
+    x_int_two_loci[,paste0(locus,c("(1)","(2)"))] <- matrix(
+      as.integer(unlist(locus_split)), 
+      nrow = nrow(x), 
+      ncol = 2, byrow = TRUE)
   }
   
   x_int <- cbind(x_int_one_loci, x_int_two_loci)
   
   x_int
+}
+
+get_initial_clustering <- function(
+    x_int,
+    x_stripped_int,
+    number_of_clusters,
+    initial_y_method = c("pam", "clara"),
+    use_stripped_data_for_initial_clustering,
+    verbose = 0) 
+{
+  initial_y_method <- match.arg(initial_y_method)
+
+  if (verbose>=1) verbose_print("Determining initial clustering using", initial_y_method)
+  
+  cluster_method <- function(x, method, k) {
+    if (method == "pam") {
+      cluster::pam(x, k = k, metric = "manhattan", diss = FALSE, 
+                   keep.diss = FALSE, keep.data = TRUE)
+    }else if (method == "clara"){
+      cluster::clara(x, k = k, metric = "manhattan", pamLike = TRUE, 
+                     samples = 100, correct.d = TRUE)
+    }else{
+      stop("inital_y_method not implemented: ", initial_y_method)
+    }
+  
+  }
+  
+  if (!use_stripped_data_for_initial_clustering) {
+
+    # attempt to use all data
+    initial_clustering <- cluster_method(x_int, initial_y_method, number_of_clusters)
+    
+    # if NA in medoids, then retry with stripped data
+    if (anyNA(initial_clustering$medoids)) {
+      use_stripped_data_for_initial_clustering <- TRUE
+      if (verbose >= 1) verbose_print("NAs in initial clustering, retrying with stripped data")
+    }
+  }else{
+    if (verbose >= 1) verbose_print("Using stripped data for initial clustering")
+  }
+  
+  if (use_stripped_data_for_initial_clustering) {
+    initial_clustering <- cluster_method(x_stripped_int, 
+                                         initial_y_method, number_of_clusters)
+  }
+
+  initial_clustering
 }
