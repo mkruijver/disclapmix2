@@ -1,7 +1,7 @@
 Package: disclapmix2
 Type: Package
 Title: Mixtures of Discrete Laplace Distributions using Numerical Optimisation
-Version: 0.6.2
+Version: 0.6.3
 Date: 2023-06-12
 Authors@R: 
     c(person("Maarten", "Kruijver", , "maarten.kruijver@esr.cri.nz", role = c("aut", "cre"),
