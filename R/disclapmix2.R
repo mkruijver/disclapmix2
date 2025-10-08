@@ -6,6 +6,7 @@
 #' @param remove_non_standard_haplotypes Should observations that are not single integer alleles be removed?
 #' @param use_stripped_data_for_initial_clustering Should non_standard data be removed for the initial clustering?
 #' @param initial_y_method Which cluster method to use for finding initial central haplotypes, y: pam (recommended) or clara.
+#' @param optim_reltol Relative convergence tolerance, passed to [stats::optim()].
 #' @param verbose Set to 1 (or higher) to print optimisation details. Default is 0.
 #' @description An extension to the *disclapmix* method in the *disclapmix* package that supports duplicated loci and other non-standard haplotypes.
 #' @returns List.
@@ -23,9 +24,12 @@
 #'
 #' stopifnot(all.equal(dlm_fit$logL_marginal, dlm2_fit$log_lik))
 #' @export
-disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_non_standard_haplotypes = TRUE, 
-                        use_stripped_data_for_initial_clustering = FALSE, initial_y_method = "pam",
-                        verbose=0L){
+disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, 
+                        remove_non_standard_haplotypes = TRUE, 
+                        use_stripped_data_for_initial_clustering = FALSE, 
+                        initial_y_method = "pam",
+                        optim_reltol = 1e-9,
+                        verbose = 0L){
   
   check_input_db(x)
   if (!(isTRUE(initial_y_method %in% c("pam", "clara")))){
@@ -122,7 +126,8 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
       negll
     }
     
-    opt <- stats::optim(par = theta, fn = f, method = "BFGS", control = list(maxit=500, reltol = 1e-9, trace=optim_trace))
+    opt <- stats::optim(par = theta, fn = f, method = "BFGS", control = 
+                          list(maxit=500, reltol = optim_reltol, trace = optim_trace))
     if (opt$convergence != 0) stop("BFGS failed to converge")
 
     theta_opt <- opt$par
@@ -212,13 +217,14 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE, remove_no
           negll
         }
         
-        opt_ns <- stats::optim(par = theta, fn = f_ns, method = "BFGS", control = list(reltol = 1e-16, trace = optim_trace))
+        opt_ns <- stats::optim(par = theta, fn = f_ns, method = "BFGS", control = list(reltol = optim_reltol, trace = optim_trace))
         if (opt$convergence != 0) stop("BFGS failed to converge")
         theta <- opt_ns$par
         
         # make v-matrix again
         tau_opt <- get_tau(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
-        p_opt <- get_P(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
+        p_opt <- get_P(theta = theta_opt, number_of_loci = number_of_loci, 
+                       number_of_clusters = number_of_clusters, link = link)
         rownames(p_opt) <- cluster_labels
         colnames(p_opt) <- loci
         
