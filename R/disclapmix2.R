@@ -132,10 +132,13 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
       negll
     }
     
+    if (verbose >= 1L) verbose_print("Starting optim")
     opt <- stats::optim(par = theta, fn = f, method = "BFGS", control = 
                           list(maxit=500, reltol = optim_reltol, trace = optim_trace))
     if (opt$convergence != 0) stop("BFGS failed to converge")
-
+    
+    if (verbose >= 1L) verbose_print("Optim finished")
+    
     theta_opt <- opt$par
     theta_iterations[[1+length(theta_iterations)]] <- theta_opt
     
@@ -150,6 +153,8 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
     v_matrix <- compute_posterior_cluster_prs(profile_pr = x_profile_pr_by_cluster, tau = tau_opt)
     
     # see if we need to move centers
+    if (verbose >= 1L) verbose_print("Checking if adjusting central haplotypes increases likelihood")
+    
     y_new <- move_centers(x_int, y, v_matrix)
     
     theta <- theta_opt
