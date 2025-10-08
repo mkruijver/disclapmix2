@@ -12,7 +12,7 @@ Description: Fit a mixture of Discrete Laplace distributions using plain numeric
 License: GPL (>= 2)
 Imports: Rcpp (>= 1.0.3), cluster
 LinkingTo: Rcpp
-RoxygenNote: 7.2.1
+RoxygenNote: 7.3.2
 Encoding: UTF-8
 Suggests: 
     testthat, disclapmix, readxl
