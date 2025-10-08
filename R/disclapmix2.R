@@ -297,7 +297,9 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
   
   ret <-  list(
     y_iterations = y_iterations, theta_iterations = theta_iterations,
-    x_int = x_int, profile_pr_by_cluster = x_profile_pr_by_cluster, 
+    x_int = x_int, 
+    x_clean_result = x_clean_result,
+    profile_pr_by_cluster = x_profile_pr_by_cluster, 
     profile_pr = x_profile_pr, posterior_cluster_pr = v_matrix, 
     log_lik = log_lik,
     y = y, p = p_opt

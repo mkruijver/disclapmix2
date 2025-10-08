@@ -72,6 +72,7 @@ clean_and_reorder <- function(x, x_summarised, include_2_loci, verbose = 0){
   }
   
   list(
+    x_before_cleaning = x,
     x_cleaned = x_cleaned,
     removed_non_standard_df = removed_non_standard_df,
     non_standard_df = non_standard_df
