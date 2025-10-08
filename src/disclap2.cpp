@@ -5,6 +5,18 @@ const int number_of_precomputed_powers = 32;
 
 // [[Rcpp::export]]
 NumericMatrix get_P(NumericVector theta, int number_of_loci, int number_of_clusters) {
+inline double inv_logit(double x) {
+  // numerically stable logistic
+  if (x >= 0) {
+    double z = std::exp(-x);
+    return 1.0 / (1.0 + z);
+  }
+  else
+  {
+    double z = std::exp(x);
+    return z / (1.0 + z);
+  }
+}
   // obtains the the discrete Laplace parameters (p) by cluster (row) and locus (column)
   // from the parametrisation
   
@@ -59,19 +71,18 @@ NumericVector get_tau(NumericVector theta, int number_of_loci, int number_of_clu
 
   NumericVector tau(number_of_clusters);
   
-  // extract tau from parameter vector
-  double tau_cum = 0.0;
+  // get tau from parameter vector by stick breaking
+  double remaining_proportion = 1.0;
   
-  for(int i_cluster = 0; i_cluster < number_of_clusters - 1; i_cluster++){
+  for (int i = 0; i < number_of_clusters - 1; i++) {
+    double v = inv_logit(theta[i]); // in (0,1)
+    double piece = remaining_proportion * v;
     
-    double tau_i = exp(theta[i_cluster]);
-    
-    tau[i_cluster] = tau_i;
-    
-    tau_cum += tau_i;
+    tau[i] = piece;
+    remaining_proportion -= piece;
   }
   
-  tau[number_of_clusters - 1] = std::max(0.0, 1.0 - tau_cum);
+  tau[c - 1] = remaining_proportion;
   
   return tau;
 }
