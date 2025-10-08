@@ -3,8 +3,9 @@ using namespace Rcpp;
 
 const int number_of_precomputed_powers = 32;
 
-// [[Rcpp::export]]
-NumericMatrix get_P(NumericVector theta, int number_of_loci, int number_of_clusters) {
+const int LINK_EXPONENTIAL = 0;
+const int LINK_LOGISTIC = 1;
+
 inline double inv_logit(double x) {
   // numerically stable logistic
   if (x >= 0) {
@@ -17,49 +18,134 @@ inline double inv_logit(double x) {
     return z / (1.0 + z);
   }
 }
+
+inline void constrain_sum_to_zero(const NumericVector& free, NumericVector& full){
+  // full is one longer than free
+  int n = full.size();
+  
+  double s = 0.0;
+  for (int i = 0; i < n - 1; ++i) {
+    full[i] = free[i];
+    s += free[i];
+  }
+  
+  full[n - 1] = -s;
+}
+
+NumericMatrix get_P_exponential(NumericVector theta, 
+                                int number_of_loci, int number_of_clusters) {
   // obtains the the discrete Laplace parameters (p) by cluster (row) and locus (column)
   // from the parametrisation
-  
+
   int r = number_of_loci;
   int c = number_of_clusters;
-  
+
   if (theta.size()!=(c-1 + r+c-1)) Rcpp::stop("theta needs length number_of_clusters-1 + number_of_loci+number_of_clusters-1");
-  
+
   // theta is the full parameter vector:
   // (theta_tau, theta_pjk)
-  
+
   // we use theta_pjk to parametrise the locus and cluster effects:
   // theta_pjk = (omega_1, ..., omega_c, lambda_1, ..., lambda_{r-1})
-  
+
   // log p_{jk} = omega_j + lambda_k
   //              (age)     (mutation rate)
   auto p = NumericMatrix(c, r);
-  
+
   if (number_of_clusters==1){
     for(int i_locus=0; i_locus < number_of_loci; i_locus++){
       p[i_locus] = std::exp(theta[i_locus]);
-      
+
       if (p[i_locus] > 0.99) p[i_locus] = 0.99;
     }
-    
+
     return p;
   }
-  
+
   for(auto i_cluster = 0; i_cluster < c; i_cluster++){   // cluster
     for(auto i_locus = 0; i_locus < r; i_locus++){ // locus
-      
+
       if (i_locus==0){
         p(i_cluster, i_locus) = std::exp(theta[c - 1 + i_cluster]);
       }else{
         p(i_cluster, i_locus) = std::exp(theta[c - 1 + i_cluster] + theta[c - 1 + c + i_locus - 1]);
       }
-      
-      if (p(i_cluster, i_locus)>0.99) p(i_cluster, i_locus) = 0.99;
+
+      if (p(i_cluster, i_locus) > 0.99) p(i_cluster, i_locus) = 0.99;
     }
-    
+
   }
-  
+
   return p;
+}
+
+// [[Rcpp::export]]
+NumericMatrix get_P_logistic(const NumericVector& theta,
+                    const int number_of_loci,
+                    const int number_of_clusters,
+                    double eps = 0) {
+
+  int r = number_of_loci;
+  int c = number_of_clusters;
+
+  // theta layout: [ tau (c-1), omega (c), lambda (r-1) ]
+  if (theta.size() != (c - 1 + r + c - 1)) Rcpp::stop(
+    "theta needs length number_of_clusters - 1 + number_of_loci + number_of_clusters - 1");
+
+  // log p_{jk} = omega_j + lambda_k
+  //              (age)     (mutation rate)
+
+  int idx_offset_alpha    = (c - 1);
+  int idx_offset_omega_free = idx_offset_alpha + 1;
+  int idx_offset_lambda_free = idx_offset_omega_free + (c - 1);
+
+  // unpack
+  double alpha = theta[idx_offset_alpha];
+
+  NumericVector omega_free(c - 1);
+  for (int j = 0; j < c - 1; ++j) omega_free[j] = theta[idx_offset_omega_free + j];
+
+  NumericVector lambda_free(r - 1);
+  for (int k = 0; k < r - 1; ++k) lambda_free[k] = theta[idx_offset_lambda_free + k];
+
+  NumericVector omega(c), lambda(r);
+  if (c == 1) {
+    omega[0] = 0.0;
+  } else {
+    constrain_sum_to_zero(omega_free, omega);   // size c
+  }
+  if (r == 1) {
+    lambda[0] = 0.0;
+  } else {
+    constrain_sum_to_zero(lambda_free, lambda); // size r
+  }
+
+  // map to probabilities, if eps>0 with a small cushion
+  const double scale = 1.0 - 2.0 * eps;
+  
+  NumericMatrix P(c, r);
+  for (int j = 0; j < c; ++j) {
+    for (int k = 0; k < r; ++k) {
+      double eta = alpha + omega[j] + lambda[k];
+      double p   = inv_logit(eta); // (0,1)
+      P(j, k) = eps + scale * p;   // (eps, 1-eps)
+    }
+  }
+  return P;
+}
+
+// [[Rcpp::export]]
+NumericMatrix get_P(const NumericVector& theta,
+                    const int number_of_loci,
+                    const int number_of_clusters,
+                    const std::string link) {
+  if (link == "exponential"){
+    return get_P_exponential(theta, number_of_loci, number_of_clusters);
+  }else if (link == "logistic"){
+    return get_P_logistic(theta, number_of_loci, number_of_clusters);
+  }else{
+    Rcpp::stop("Unknown link function");
+  }
 }
 
 // [[Rcpp::export]]
@@ -87,6 +173,7 @@ NumericVector get_tau(NumericVector theta, int number_of_loci, int number_of_clu
   return tau;
 }
 
+// [[Rcpp::export]]
 std::vector<NumericMatrix> precompute_dlm_powers(NumericMatrix p_by_cluster_and_locus){
   std::vector<NumericMatrix> prs_by_cluster;
   
@@ -103,8 +190,7 @@ std::vector<NumericMatrix> precompute_dlm_powers(NumericMatrix p_by_cluster_and_
       prs(0, i_locus) = (1.0-p)/(1.0+p);
       
       for(int i = 1; i < number_of_precomputed_powers; i++){
-        prs(i, i_locus) = (1.0-p)/(1.0+p) * std::pow(p,i);//prs(i-1, i_locus) * p;
-        // prs(i, i_locus) = prs(i-1, i_locus) * p;
+        prs(i, i_locus) = (1.0-p)/(1.0+p) * std::pow(p,i);
       }
     }
     
@@ -412,15 +498,16 @@ double loglik_tau_p_ns(NumericVector tau, NumericMatrix p_by_cluster_and_locus,
 
 // [[Rcpp::export]]
 double neg_loglik_theta(NumericVector theta, IntegerMatrix db, IntegerMatrix y,
-                    int number_of_1_loci, int number_of_2_loci) {
+                    int number_of_1_loci, int number_of_2_loci,
+                    const std::string link) {
   
   int number_of_loci = number_of_1_loci + number_of_2_loci;
   int number_of_clusters = y.nrow();
   
   // obtain model parameters from theta
   NumericVector tau = get_tau(theta, number_of_loci, number_of_clusters);
-  NumericMatrix p = get_P(theta, number_of_loci, number_of_clusters);
-  
+  NumericMatrix p = get_P(theta, number_of_loci, number_of_clusters, link);
+
   double ll = loglik_tau_p(tau, p, db, y, number_of_1_loci, number_of_2_loci);
   
   return -ll;
@@ -603,7 +690,8 @@ NumericMatrix compute_posterior_cluster_prs(NumericMatrix profile_pr, NumericVec
 // [[Rcpp::export]]
 double neg_loglik_theta_ns(NumericVector theta, IntegerMatrix db, IntegerMatrix y,
                            NumericMatrix pi, NumericMatrix q,
-                        int number_of_1_loci, int number_of_2_loci) {
+                           int number_of_1_loci, int number_of_2_loci,
+                           const std::string link) {
   // theta is the parameter vector (parametrises the variances)
   // pi contains the pr. of a non-standard haplotype by cluster (row) and locus (column)
   // q  contains the pr's of each non-standard haplotype (row) by cluster (column)
@@ -613,7 +701,7 @@ double neg_loglik_theta_ns(NumericVector theta, IntegerMatrix db, IntegerMatrix 
   
   // obtain model parameters from theta
   NumericVector tau = get_tau(theta, number_of_loci, number_of_clusters);
-  NumericMatrix p = get_P(theta, number_of_loci, number_of_clusters);
+  NumericMatrix p = get_P(theta, number_of_loci, number_of_clusters, link);
   
   double ll = loglik_tau_p_ns(tau, p, db, y, pi, q, number_of_1_loci, number_of_2_loci);
   

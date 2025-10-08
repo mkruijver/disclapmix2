@@ -11,6 +11,8 @@ disclapmix2(
   remove_non_standard_haplotypes = TRUE,
   use_stripped_data_for_initial_clustering = FALSE,
   initial_y_method = "pam",
+  link = "exponential",
+  optim_reltol = 1e-09,
   verbose = 0L
 )
 }
@@ -26,6 +28,10 @@ disclapmix2(
 \item{use_stripped_data_for_initial_clustering}{Should non_standard data be removed for the initial clustering?}
 
 \item{initial_y_method}{Which cluster method to use for finding initial central haplotypes, y: pam (recommended) or clara.}
+
+\item{link}{Which link function is used in the parametrisation of the variances? Exponential (default) or logistic.}
+
+\item{optim_reltol}{Relative convergence tolerance, passed to [stats::optim()].}
 
 \item{verbose}{Set to 1 (or higher) to print optimisation details. Default is 0.}
 }

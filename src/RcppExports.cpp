@@ -10,16 +10,31 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
-// get_P
-NumericMatrix get_P(NumericVector theta, int number_of_loci, int number_of_clusters);
-RcppExport SEXP _disclapmix2_get_P(SEXP thetaSEXP, SEXP number_of_lociSEXP, SEXP number_of_clustersSEXP) {
+// get_P_logistic
+NumericMatrix get_P_logistic(const NumericVector& theta, const int number_of_loci, const int number_of_clusters, double eps);
+RcppExport SEXP _disclapmix2_get_P_logistic(SEXP thetaSEXP, SEXP number_of_lociSEXP, SEXP number_of_clustersSEXP, SEXP epsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type theta(thetaSEXP);
-    Rcpp::traits::input_parameter< int >::type number_of_loci(number_of_lociSEXP);
-    Rcpp::traits::input_parameter< int >::type number_of_clusters(number_of_clustersSEXP);
-    rcpp_result_gen = Rcpp::wrap(get_P(theta, number_of_loci, number_of_clusters));
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const int >::type number_of_loci(number_of_lociSEXP);
+    Rcpp::traits::input_parameter< const int >::type number_of_clusters(number_of_clustersSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_P_logistic(theta, number_of_loci, number_of_clusters, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
+// get_P
+NumericMatrix get_P(const NumericVector& theta, const int number_of_loci, const int number_of_clusters, const std::string link);
+RcppExport SEXP _disclapmix2_get_P(SEXP thetaSEXP, SEXP number_of_lociSEXP, SEXP number_of_clustersSEXP, SEXP linkSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type theta(thetaSEXP);
+    Rcpp::traits::input_parameter< const int >::type number_of_loci(number_of_lociSEXP);
+    Rcpp::traits::input_parameter< const int >::type number_of_clusters(number_of_clustersSEXP);
+    Rcpp::traits::input_parameter< const std::string >::type link(linkSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_P(theta, number_of_loci, number_of_clusters, link));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -33,6 +48,17 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type number_of_loci(number_of_lociSEXP);
     Rcpp::traits::input_parameter< int >::type number_of_clusters(number_of_clustersSEXP);
     rcpp_result_gen = Rcpp::wrap(get_tau(theta, number_of_loci, number_of_clusters));
+    return rcpp_result_gen;
+END_RCPP
+}
+// precompute_dlm_powers
+std::vector<NumericMatrix> precompute_dlm_powers(NumericMatrix p_by_cluster_and_locus);
+RcppExport SEXP _disclapmix2_precompute_dlm_powers(SEXP p_by_cluster_and_locusSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type p_by_cluster_and_locus(p_by_cluster_and_locusSEXP);
+    rcpp_result_gen = Rcpp::wrap(precompute_dlm_powers(p_by_cluster_and_locus));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -71,8 +97,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // neg_loglik_theta
-double neg_loglik_theta(NumericVector theta, IntegerMatrix db, IntegerMatrix y, int number_of_1_loci, int number_of_2_loci);
-RcppExport SEXP _disclapmix2_neg_loglik_theta(SEXP thetaSEXP, SEXP dbSEXP, SEXP ySEXP, SEXP number_of_1_lociSEXP, SEXP number_of_2_lociSEXP) {
+double neg_loglik_theta(NumericVector theta, IntegerMatrix db, IntegerMatrix y, int number_of_1_loci, int number_of_2_loci, const std::string link);
+RcppExport SEXP _disclapmix2_neg_loglik_theta(SEXP thetaSEXP, SEXP dbSEXP, SEXP ySEXP, SEXP number_of_1_lociSEXP, SEXP number_of_2_lociSEXP, SEXP linkSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -81,7 +107,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< IntegerMatrix >::type y(ySEXP);
     Rcpp::traits::input_parameter< int >::type number_of_1_loci(number_of_1_lociSEXP);
     Rcpp::traits::input_parameter< int >::type number_of_2_loci(number_of_2_lociSEXP);
-    rcpp_result_gen = Rcpp::wrap(neg_loglik_theta(theta, db, y, number_of_1_loci, number_of_2_loci));
+    Rcpp::traits::input_parameter< const std::string >::type link(linkSEXP);
+    rcpp_result_gen = Rcpp::wrap(neg_loglik_theta(theta, db, y, number_of_1_loci, number_of_2_loci, link));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -145,8 +172,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // neg_loglik_theta_ns
-double neg_loglik_theta_ns(NumericVector theta, IntegerMatrix db, IntegerMatrix y, NumericMatrix pi, NumericMatrix q, int number_of_1_loci, int number_of_2_loci);
-RcppExport SEXP _disclapmix2_neg_loglik_theta_ns(SEXP thetaSEXP, SEXP dbSEXP, SEXP ySEXP, SEXP piSEXP, SEXP qSEXP, SEXP number_of_1_lociSEXP, SEXP number_of_2_lociSEXP) {
+double neg_loglik_theta_ns(NumericVector theta, IntegerMatrix db, IntegerMatrix y, NumericMatrix pi, NumericMatrix q, int number_of_1_loci, int number_of_2_loci, const std::string link);
+RcppExport SEXP _disclapmix2_neg_loglik_theta_ns(SEXP thetaSEXP, SEXP dbSEXP, SEXP ySEXP, SEXP piSEXP, SEXP qSEXP, SEXP number_of_1_lociSEXP, SEXP number_of_2_lociSEXP, SEXP linkSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -157,7 +184,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericMatrix >::type q(qSEXP);
     Rcpp::traits::input_parameter< int >::type number_of_1_loci(number_of_1_lociSEXP);
     Rcpp::traits::input_parameter< int >::type number_of_2_loci(number_of_2_lociSEXP);
-    rcpp_result_gen = Rcpp::wrap(neg_loglik_theta_ns(theta, db, y, pi, q, number_of_1_loci, number_of_2_loci));
+    Rcpp::traits::input_parameter< const std::string >::type link(linkSEXP);
+    rcpp_result_gen = Rcpp::wrap(neg_loglik_theta_ns(theta, db, y, pi, q, number_of_1_loci, number_of_2_loci, link));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -193,16 +221,18 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_disclapmix2_get_P", (DL_FUNC) &_disclapmix2_get_P, 3},
+    {"_disclapmix2_get_P_logistic", (DL_FUNC) &_disclapmix2_get_P_logistic, 4},
+    {"_disclapmix2_get_P", (DL_FUNC) &_disclapmix2_get_P, 4},
     {"_disclapmix2_get_tau", (DL_FUNC) &_disclapmix2_get_tau, 3},
+    {"_disclapmix2_precompute_dlm_powers", (DL_FUNC) &_disclapmix2_precompute_dlm_powers, 1},
     {"_disclapmix2_loglik_tau_p", (DL_FUNC) &_disclapmix2_loglik_tau_p, 6},
     {"_disclapmix2_loglik_tau_p_ns", (DL_FUNC) &_disclapmix2_loglik_tau_p_ns, 8},
-    {"_disclapmix2_neg_loglik_theta", (DL_FUNC) &_disclapmix2_neg_loglik_theta, 5},
+    {"_disclapmix2_neg_loglik_theta", (DL_FUNC) &_disclapmix2_neg_loglik_theta, 6},
     {"_disclapmix2_compute_profile_prs", (DL_FUNC) &_disclapmix2_compute_profile_prs, 5},
     {"_disclapmix2_compute_profiles_pr_by_cluster_and_locus", (DL_FUNC) &_disclapmix2_compute_profiles_pr_by_cluster_and_locus, 5},
     {"_disclapmix2_compute_profile_prs_ns", (DL_FUNC) &_disclapmix2_compute_profile_prs_ns, 7},
     {"_disclapmix2_compute_posterior_cluster_prs", (DL_FUNC) &_disclapmix2_compute_posterior_cluster_prs, 2},
-    {"_disclapmix2_neg_loglik_theta_ns", (DL_FUNC) &_disclapmix2_neg_loglik_theta_ns, 7},
+    {"_disclapmix2_neg_loglik_theta_ns", (DL_FUNC) &_disclapmix2_neg_loglik_theta_ns, 8},
     {"_disclapmix2_estimate_pr_ns", (DL_FUNC) &_disclapmix2_estimate_pr_ns, 5},
     {"_disclapmix2_estimate_q", (DL_FUNC) &_disclapmix2_estimate_q, 5},
     {NULL, NULL, 0}

@@ -6,6 +6,7 @@
 #' @param remove_non_standard_haplotypes Should observations that are not single integer alleles be removed?
 #' @param use_stripped_data_for_initial_clustering Should non_standard data be removed for the initial clustering?
 #' @param initial_y_method Which cluster method to use for finding initial central haplotypes, y: pam (recommended) or clara.
+#' @param link Which link function is used in the parametrisation of the variances? Exponential (default) or logistic.
 #' @param optim_reltol Relative convergence tolerance, passed to [stats::optim()].
 #' @param verbose Set to 1 (or higher) to print optimisation details. Default is 0.
 #' @description An extension to the *disclapmix* method in the *disclapmix* package that supports duplicated loci and other non-standard haplotypes.
@@ -28,6 +29,7 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
                         remove_non_standard_haplotypes = TRUE, 
                         use_stripped_data_for_initial_clustering = FALSE, 
                         initial_y_method = "pam",
+                        link = "exponential",
                         optim_reltol = 1e-9,
                         verbose = 0L){
   
@@ -35,8 +37,11 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
   if (!(isTRUE(initial_y_method %in% c("pam", "clara")))){
     stop("initial_y_method needs to be \"pam\" or \"clara\"")
   }
+  if (!(isTRUE(link %in% c("exponential", "logistic")))){
+    stop("link needs to be \"exponential\" or \"logistic\"")
+  }
   
-  if (verbose>=1) verbose_print("Determining loci with suitable data")
+  if (verbose >= 1) verbose_print("Determining loci with suitable data")
   x_summarised <- summarise_db(x)
   
   # clean the data such that 1-loci only have 1 integer or NA
@@ -121,7 +126,8 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
     y_iterations[[1 + length(y_iterations)]] <- y
     
     f <- function(theta) {
-      negll <- neg_loglik_theta(theta, x_int, y, number_of_1_loci, number_of_2_loci)
+      negll <- neg_loglik_theta(theta, x_int, y, 
+                                number_of_1_loci, number_of_2_loci, link)
       
       negll
     }
@@ -134,7 +140,8 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
     theta_iterations[[1+length(theta_iterations)]] <- theta_opt
     
     tau_opt <- get_tau(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
-    p_opt <- get_P(theta = theta_opt, number_of_loci = number_of_loci, number_of_clusters = number_of_clusters)
+    p_opt <- get_P(theta = theta_opt, number_of_loci = number_of_loci, 
+                   number_of_clusters = number_of_clusters, link = link)
     
     rownames(p_opt) <- cluster_labels
     colnames(p_opt) <- loci
@@ -208,7 +215,8 @@ disclapmix2 <- function(x, number_of_clusters, include_2_loci = FALSE,
         
         # optimise the variances again including the non-standard haplotypes
         f_ns <- function(theta) {
-          negll <- neg_loglik_theta_ns(theta, x_int_ns, y, pi_opt, q_opt, number_of_1_loci, number_of_2_loci)
+          negll <- neg_loglik_theta_ns(theta, x_int_ns, y, pi_opt, q_opt, 
+                                       number_of_1_loci, number_of_2_loci, link)
           
           if (is.nan(negll) || is.infinite(negll)){
             theta_fail <<- theta
